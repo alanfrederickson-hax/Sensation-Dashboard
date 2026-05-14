@@ -294,11 +294,14 @@
                 }
             }
 
+            // Check if the physical bodies of the circles are overlapping
+            let bodiesTouching = Math.hypot(p1.x - p2.x, p1.y - p2.y) < (p1.r + p2.r);
+
             // 3. Sword vs Circle Collisions
             // P1 Sword -> P2 Circle
             let closest2 = getClosestPointOnSegment(p2, p1.start, p1.tip);
-            // Thickened hitbox check against enemy circle
-            if (Math.hypot(p2.x - closest2.x, p2.y - closest2.y) < p2.r + (p1.swordWidth / 2)) {
+            // Thickened hitbox check against enemy circle (prevent damage if bodies are touching)
+            if (!bodiesTouching && Math.hypot(p2.x - closest2.x, p2.y - closest2.y) < p2.r + (p1.swordWidth / 2)) {
                 p1Reverses = true; // Sword hit something, reverse it
                 if (p2.hitCooldown <= 0) {
                     let isCrit = Math.random() < 0.15; // 15% chance to crit
@@ -312,8 +315,8 @@
 
             // P2 Sword -> P1 Circle
             let closest1 = getClosestPointOnSegment(p1, p2.start, p2.tip);
-            // Thickened hitbox check against enemy circle
-            if (Math.hypot(p1.x - closest1.x, p1.y - closest1.y) < p1.r + (p2.swordWidth / 2)) {
+            // Thickened hitbox check against enemy circle (prevent damage if bodies are touching)
+            if (!bodiesTouching && Math.hypot(p1.x - closest1.x, p1.y - closest1.y) < p1.r + (p2.swordWidth / 2)) {
                 p2Reverses = true; // Sword hit something, reverse it
                 if (p1.hitCooldown <= 0) {
                     let isCrit = Math.random() < 0.15; // 15% chance to crit
