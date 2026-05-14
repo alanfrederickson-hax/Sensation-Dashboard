@@ -202,11 +202,12 @@
     const gridContainer = document.getElementById('dashboard-grid');
     for (let i = 0; i < 24; i++) {
       const btn = document.createElement('button');
-      if (i === 0 || i === 1) {
+      if (i === 0 || i === 1 || i === 2) {
         btn.className = "aspect-square rounded-2xl flex flex-col items-center justify-center p-2 transition-all shadow-md backdrop-blur-sm border-2 bg-neutral-900 hover:bg-neutral-800 border-neutral-700 hover:scale-105 active:scale-95";
         btn.onclick = () => {
           if (i === 0) switchView('game');
           if (i === 1) window.location.href = 'CircleSlash.HTML';
+          if (i === 2) window.location.href = 'FallingRocks.html';
         };
         
         if (i === 0) {
@@ -218,6 +219,11 @@
           btn.innerHTML = `
             <span class="text-3xl mb-1">⚔️</span>
             <span class="text-[10px] font-bold text-white uppercase tracking-wider text-center leading-tight">Circle<br/>Slash</span>
+          `;
+        } else if (i === 2) {
+          btn.innerHTML = `
+            <span class="text-3xl mb-1">🪨</span>
+            <span class="text-[10px] font-bold text-white uppercase tracking-wider text-center leading-tight">Falling<br/>Rocks</span>
           `;
         }
       } else {
