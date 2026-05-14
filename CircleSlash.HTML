@@ -63,6 +63,7 @@
         // Fixed internal resolution, independent of device screen size
         const W = 360;
         const H = 640;
+        const TOP_BOUND = 75; // New upper limit below the HP bars
         
         const TARGET_SPEED = 4;
         const MAX_HP = 50;
@@ -105,7 +106,7 @@
 
         // Check if segment intersects any of the 4 canvas walls
         function checkWallIntersection(start, tip) {
-            let tl = {x:0, y:0}, tr = {x:W, y:0}, br = {x:W, y:H}, bl = {x:0, y:H};
+            let tl = {x:0, y:TOP_BOUND}, tr = {x:W, y:TOP_BOUND}, br = {x:W, y:H}, bl = {x:0, y:H};
             let walls = [ [tl, tr], [tr, br], [br, bl], [bl, tl] ];
             for (let w of walls) {
                 let pt = getIntersection(start, tip, w[0], w[1]);
@@ -170,10 +171,10 @@
                 this.x += this.vx;
                 this.y += this.vy;
 
-                // Circle collisions with Box Walls
+                // Circle collisions with Box Walls (Updated top bound)
                 if (this.x - this.r < 0) { this.x = this.r; this.vx *= -1; }
                 if (this.x + this.r > W) { this.x = W - this.r; this.vx *= -1; }
-                if (this.y - this.r < 0) { this.y = this.r; this.vy *= -1; }
+                if (this.y - this.r < TOP_BOUND) { this.y = TOP_BOUND + this.r; this.vy *= -1; }
                 if (this.y + this.r > H) { this.y = H - this.r; this.vy *= -1; }
 
                 // Update sword angle
@@ -252,6 +253,14 @@
             // Solid clear - removed fading trail (neon) effect
             ctx.fillStyle = '#111827';
             ctx.fillRect(0, 0, W, H);
+
+            // Draw the purple battlefield boundary line
+            ctx.beginPath();
+            ctx.moveTo(0, TOP_BOUND);
+            ctx.lineTo(W, TOP_BOUND);
+            ctx.strokeStyle = '#a855f7'; // Purple
+            ctx.lineWidth = 4;
+            ctx.stroke();
 
             let p1 = players[0];
             let p2 = players[1];
@@ -361,17 +370,38 @@
                 
                 ctx.globalAlpha = Math.min(1, ft.life / 15); // Fade out near the end
                 
-                // Draw Light Blue Exclamation Mark
-                ctx.fillStyle = '#38bdf8'; // light blue
-                ctx.font = '900 60px sans-serif';
+                ctx.save();
+                ctx.translate(ft.x, ft.y);
+                
+                // Draw jagged POW Bubble
+                ctx.beginPath();
+                let spikes = 10;
+                let outerRadius = 35;
+                let innerRadius = 22;
+                for(let j = 0; j < spikes * 2; j++) {
+                    let r = (j % 2 === 0) ? outerRadius : innerRadius;
+                    let a = (Math.PI * j) / spikes;
+                    if (j === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+                    else ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+                }
+                ctx.closePath();
+                ctx.fillStyle = '#fbbf24'; // Amber/Yellow
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#000000';
+                ctx.stroke();
+                
+                // Draw large Red 5 inside the POW bubble
+                ctx.fillStyle = '#ef4444'; // red
+                ctx.font = '900 40px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('!', ft.x, ft.y);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ffffff'; // white outline
+                ctx.strokeText('5', 0, 2);
+                ctx.fillText('5', 0, 2);
                 
-                // Draw Red 5 inside the upper vertical bar of the exclamation mark
-                ctx.fillStyle = '#ef4444'; // red
-                ctx.font = '900 20px sans-serif';
-                ctx.fillText('5', ft.x, ft.y - 10);
+                ctx.restore();
                 
                 ctx.globalAlpha = 1.0;
 
@@ -380,7 +410,8 @@
 
             // Win Condition
             if (p1.hp <= 0 || p2.hp <= 0) {
-                endGame(p1.hp <= 0 && p2.hp <= 0 ? "Draw!" : (p1.hp <= 0 ? "BLUE WINS!" : "RED WINS!"));
+                let winner = (p1.hp <= 0 && p2.hp <= 0) ? "DRAW" : (p1.hp <= 0 ? "BLUE" : "RED");
+                endGame(winner);
             } else {
                 animationId = requestAnimationFrame(update);
             }
@@ -405,22 +436,47 @@
             update();
         }
 
-        function endGame(text) {
+        function endGame(winner) {
             gameOver = true;
             
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
             ctx.fillRect(0, 0, W, H);
             
-            ctx.font = 'bold 40px sans-serif';
-            if(text.includes("RED")) ctx.fillStyle = '#ef4444';
-            else if(text.includes("BLUE")) ctx.fillStyle = '#3b82f6';
-            else ctx.fillStyle = '#ffffff';
+            let winText = "";
+            let swordImg = null;
+
+            if (winner === 'RED') {
+                winText = "RED WON!";
+                ctx.fillStyle = '#ef4444';
+                swordImg = imgRedSword;
+            } else if (winner === 'BLUE') {
+                winText = "BLUE WON!";
+                ctx.fillStyle = '#3b82f6';
+                swordImg = imgBlueSword;
+            } else {
+                winText = "DRAW!";
+                ctx.fillStyle = '#ffffff';
+            }
+
+            // Draw Winner's Sword
+            if (swordImg && swordImg.complete) {
+                ctx.save();
+                ctx.translate(W/2, H/2 - 40);
+                let sWidth = 80;
+                let sHeight = 240;
+                ctx.drawImage(swordImg, -sWidth/2, -sHeight/2, sWidth, sHeight);
+                ctx.restore();
+            }
             
+            ctx.font = '900 45px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(text, W/2, H/2);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000';
+            ctx.strokeText(winText, W/2, H/2 + 130);
+            ctx.fillText(winText, W/2, H/2 + 130);
             
-            // Auto restart after 3 seconds
-            setTimeout(startGame, 3000);
+            // Auto restart after 10 seconds
+            setTimeout(startGame, 10000);
         }
 
         // Start game immediately
