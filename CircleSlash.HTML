@@ -198,8 +198,11 @@
                     // We rotate by 90 degrees (Math.PI / 2) to align the "up" direction with the sword's path.
                     ctx.rotate(Math.PI / 2);
                     
-                    // Draw the vertical image: centered on its width, and extending upwards by swordLen
-                    ctx.drawImage(this.swordImg, -this.swordWidth / 2, -this.swordLen, this.swordWidth, this.swordLen);
+                    // Make the visual image slightly wider than the physics hitbox, but keep the same height (length)
+                    let visualWidth = this.swordWidth * 1.8;
+                    
+                    // Draw the vertical image: centered on its visual width, and extending upwards by swordLen
+                    ctx.drawImage(this.swordImg, -visualWidth / 2, -this.swordLen, visualWidth, this.swordLen);
                     
                     ctx.restore();
                 } else {
