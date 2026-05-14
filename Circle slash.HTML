@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Circle Slash</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; touch-action: none; user-select: none; -webkit-user-select: none; }
+    </style>
+</head>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Phone-shaped container -->
+    <div class="relative w-full max-w-[360px] aspect-[9/16] bg-gray-900 border-[12px] border-gray-800 rounded-[2.5rem] overflow-hidden shadow-2xl ring-4 ring-black/50">
+        
+        <!-- Modern HP UI overlay -->
+        <div id="ui-layer" class="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10 pointer-events-none bg-gradient-to-b from-black/80 to-transparent">
+            <div class="w-[40%]">
+                <div class="flex justify-between items-end mb-1">
+                    <div class="text-white font-bold text-[10px] tracking-wider drop-shadow-md">RED HP</div>
+                    <div id="red-hp-num" class="text-white font-bold text-[12px] tracking-wider drop-shadow-md">50</div>
+                </div>
+                <div class="w-full h-3 bg-gray-800 rounded-full border border-gray-700 overflow-hidden">
+                    <div id="red-hp" class="h-full bg-[#ef4444] transition-all duration-200" style="width: 100%;"></div>
+                </div>
+            </div>
+            <div class="text-gray-400 font-black text-lg px-1">VS</div>
+            <div class="w-[40%] text-right">
+                <div class="flex justify-between items-end mb-1 flex-row-reverse">
+                    <div class="text-white font-bold text-[10px] tracking-wider drop-shadow-md">BLUE HP</div>
+                    <div id="blue-hp-num" class="text-white font-bold text-[12px] tracking-wider drop-shadow-md">50</div>
+                </div>
+                <div class="w-full h-3 bg-gray-800 rounded-full border border-gray-700 overflow-hidden flex justify-end">
+                    <div id="blue-hp" class="h-full bg-[#3b82f6] transition-all duration-200" style="width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="360" height="640" class="block w-full h-full bg-[#111827]"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const redHpBar = document.getElementById('red-hp');
+        const blueHpBar = document.getElementById('blue-hp');
+        const redHpNum = document.getElementById('red-hp-num');
+        const blueHpNum = document.getElementById('blue-hp-num');
+
+        // Preload custom sword images
+        const imgRedSword = new Image();
+        imgRedSword.src = 'https://files.catbox.moe/yfniuk.png';
+        
+        const imgBlueSword = new Image();
+        imgBlueSword.src = 'https://files.catbox.moe/6h7w4q.png';
+
+        // Fixed internal resolution, independent of device screen size
+        const W = 360;
+        const H = 640;
+        
+        const TARGET_SPEED = 4;
+        const MAX_HP = 50;
+
+        let players = [];
+        let particles = [];
+        let animationId;
+        let gameOver = true;
+
+        // --- MATH & COLLISION HELPERS ---
+
+        function sqr(x) { return x * x; }
+        function dist2(v, w) { return sqr(v.x - w.x) + sqr(v.y - w.y); }
+
+        // Find closest point on line segment (v,w) to point p
+        function getClosestPointOnSegment(p, v, w) {
+            let l2 = dist2(v, w);
+            if (l2 === 0) return v;
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) };
+        }
+
+        // Line intersection check (returns intersection point or null)
+        function getIntersection(a, b, c, d) {
+            let det = (b.x - a.x) * (d.y - c.y) - (d.x - c.x) * (b.y - a.y);
+            if (det === 0) return null; // parallel
+            let lambda = ((d.y - c.y) * (d.x - a.x) + (c.x - d.x) * (d.y - a.y)) / det;
+            let gamma = ((a.y - b.y) * (d.x - a.x) + (b.x - a.x) * (d.y - a.y)) / det;
+            
+            if ((0 < lambda && lambda < 1) && (0 < gamma && gamma < 1)) {
+                return {
+                    x: a.x + lambda * (b.x - a.x),
+                    y: a.y + lambda * (b.y - a.y)
+                };
+            }
+            return null;
+        }
+
+        // Check if segment intersects any of the 4 canvas walls
+        function checkWallIntersection(start, tip) {
+            let tl = {x:0, y:0}, tr = {x:W, y:0}, br = {x:W, y:H}, bl = {x:0, y:H};
+            let walls = [ [tl, tr], [tr, br], [br, bl], [bl, tl] ];
+            for (let w of walls) {
+                let pt = getIntersection(start, tip, w[0], w[1]);
+                if (pt) return pt;
+            }
+            return null;
+        }
+
+        function createSparks(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 15 + Math.random() * 15,
+                    color: color
+                });
+            }
+        }
+
+        // --- CLASSES ---
+
+        class Player {
+            constructor(x, y, color, name, startAngle, swordImg) {
+                this.x = x;
+                this.y = y;
+                
+                // Give initial random velocities
+                let angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * TARGET_SPEED;
+                this.vy = Math.sin(angle) * TARGET_SPEED;
+                
+                this.r = 20; // Fixed radius
+                this.color = color;
+                this.name = name;
+                this.hp = MAX_HP;
+                
+                this.angle = startAngle;
+                this.spinSpeed = 0.08;
+                this.spinDir = 1;
+                this.swordLen = 80; // Increased length for longer hitboxes
+                this.swordWidth = 24; // Added width for thicker hitboxes
+                
+                this.spinCooldown = 0; // Prevent rapid-fire reversing
+                this.hitCooldown = 0;  // I-frames after taking damage
+                
+                this.swordImg = swordImg; // Save the assigned image
+                
+                // Track sword line segment positions
+                this.start = {x: 0, y: 0};
+                this.tip = {x: 0, y: 0};
+            }
+
+            updateCoords() {
+                // Keep constant moving speed
+                let speed = Math.hypot(this.vx, this.vy);
+                if (speed > 0) {
+                    this.vx = (this.vx / speed) * TARGET_SPEED;
+                    this.vy = (this.vy / speed) * TARGET_SPEED;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Circle collisions with Box Walls
+                if (this.x - this.r < 0) { this.x = this.r; this.vx *= -1; }
+                if (this.x + this.r > W) { this.x = W - this.r; this.vx *= -1; }
+                if (this.y - this.r < 0) { this.y = this.r; this.vy *= -1; }
+                if (this.y + this.r > H) { this.y = H - this.r; this.vy *= -1; }
+
+                // Update sword angle
+                this.angle += this.spinSpeed * this.spinDir;
+
+                // Calculate sword endpoints (starts at the edge of the circle)
+                this.start = {
+                    x: this.x + Math.cos(this.angle) * this.r,
+                    y: this.y + Math.sin(this.angle) * this.r
+                };
+                this.tip = {
+                    x: this.x + Math.cos(this.angle) * (this.r + this.swordLen),
+                    y: this.y + Math.sin(this.angle) * (this.r + this.swordLen)
+                };
+
+                if (this.spinCooldown > 0) this.spinCooldown--;
+                if (this.hitCooldown > 0) this.hitCooldown--;
+            }
+
+            draw() {
+                // Draw Sword
+                if (this.swordImg && this.swordImg.complete && this.swordImg.naturalWidth > 0) {
+                    ctx.save();
+                    ctx.translate(this.start.x, this.start.y); // Move to the edge of the circle (hilt position)
+                    ctx.rotate(this.angle); // Rotate to point along the invisible collision line
+                    
+                    // The images are naturally vertical (pointing up). 
+                    // We rotate by 90 degrees (Math.PI / 2) to align the "up" direction with the sword's path.
+                    ctx.rotate(Math.PI / 2);
+                    
+                    // Draw the vertical image: centered on its width, and extending upwards by swordLen
+                    ctx.drawImage(this.swordImg, -this.swordWidth / 2, -this.swordLen, this.swordWidth, this.swordLen);
+                    
+                    ctx.restore();
+                } else {
+                    // Fallback to drawn line if image isn't loaded
+                    ctx.beginPath();
+                    ctx.moveTo(this.start.x, this.start.y);
+                    ctx.lineTo(this.tip.x, this.tip.y);
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = this.swordWidth;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
+
+                // Draw Circle Player
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                ctx.fillStyle = this.hitCooldown > 0 ? '#ffffff' : this.color;
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+            }
+        }
+
+        // --- GAME LOGIC ---
+
+        function bouncePlayerOffPoint(p, pt) {
+            let nx = p.x - pt.x;
+            let ny = p.y - pt.y;
+            let d = Math.hypot(nx, ny);
+            if (d > 0) {
+                // Bounce away from the impact point
+                p.vx = (nx / d) * TARGET_SPEED;
+                p.vy = (ny / d) * TARGET_SPEED;
+            }
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Solid clear - removed fading trail (neon) effect
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(0, 0, W, H);
+
+            let p1 = players[0];
+            let p2 = players[1];
+
+            p1.updateCoords();
+            p2.updateCoords();
+
+            let p1Reverses = false;
+            let p2Reverses = false;
+
+            // 1. Sword vs Box Wall Collisions
+            let p1WallHit = checkWallIntersection(p1.start, p1.tip);
+            if (p1WallHit) {
+                p1Reverses = true;
+                if (p1.spinCooldown <= 0) createSparks(p1WallHit.x, p1WallHit.y, '#9ca3af');
+            }
+
+            let p2WallHit = checkWallIntersection(p2.start, p2.tip);
+            if (p2WallHit) {
+                p2Reverses = true;
+                if (p2.spinCooldown <= 0) createSparks(p2WallHit.x, p2WallHit.y, '#9ca3af');
+            }
+
+            // 2. Sword vs Sword Collision
+            let swHit = getIntersection(p1.start, p1.tip, p2.start, p2.tip);
+            if (swHit) {
+                p1Reverses = true;
+                p2Reverses = true;
+                if (p1.spinCooldown <= 0 || p2.spinCooldown <= 0) {
+                    createSparks(swHit.x, swHit.y, '#fde047');
+                }
+            }
+
+            // 3. Sword vs Circle Collisions
+            // P1 Sword -> P2 Circle
+            let closest2 = getClosestPointOnSegment(p2, p1.start, p1.tip);
+            // Thickened hitbox check against enemy circle
+            if (Math.hypot(p2.x - closest2.x, p2.y - closest2.y) < p2.r + (p1.swordWidth / 2)) {
+                p1Reverses = true; // Sword hit something, reverse it
+                if (p2.hitCooldown <= 0) {
+                    p2.hp -= 1;
+                    p2.hitCooldown = 25;
+                    bouncePlayerOffPoint(p2, closest2); // Physical bump
+                    createSparks(closest2.x, closest2.y, p2.color);
+                }
+            }
+
+            // P2 Sword -> P1 Circle
+            let closest1 = getClosestPointOnSegment(p1, p2.start, p2.tip);
+            // Thickened hitbox check against enemy circle
+            if (Math.hypot(p1.x - closest1.x, p1.y - closest1.y) < p1.r + (p2.swordWidth / 2)) {
+                p2Reverses = true; // Sword hit something, reverse it
+                if (p1.hitCooldown <= 0) {
+                    p1.hp -= 1;
+                    p1.hitCooldown = 25;
+                    bouncePlayerOffPoint(p1, closest1); // Physical bump
+                    createSparks(closest1.x, closest1.y, p1.color);
+                }
+            }
+
+            // Apply Reversals (with cooldowns to prevent getting stuck in walls/swords)
+            if (p1Reverses && p1.spinCooldown <= 0) {
+                p1.spinDir *= -1;
+                p1.spinCooldown = 15;
+            }
+            if (p2Reverses && p2.spinCooldown <= 0) {
+                p2.spinDir *= -1;
+                p2.spinCooldown = 15;
+            }
+
+            // Draw Players
+            p1.draw();
+            p2.draw();
+
+            // Update sleek HTML HP Bars & exact text numbers
+            redHpBar.style.width = `${Math.max(0, (p1.hp / MAX_HP) * 100)}%`;
+            blueHpBar.style.width = `${Math.max(0, (p2.hp / MAX_HP) * 100)}%`;
+            redHpNum.textContent = Math.max(0, p1.hp);
+            blueHpNum.textContent = Math.max(0, p2.hp);
+
+            // Handle Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.life--;
+                
+                if (pt.life <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    ctx.globalAlpha = pt.life / 30;
+                    ctx.fillStyle = pt.color;
+                    ctx.fillRect(pt.x, pt.y, 4, 4);
+                    ctx.globalAlpha = 1.0;
+                }
+            }
+
+            // Win Condition
+            if (p1.hp <= 0 || p2.hp <= 0) {
+                endGame(p1.hp <= 0 && p2.hp <= 0 ? "Draw!" : (p1.hp <= 0 ? "BLUE WINS!" : "RED WINS!"));
+            } else {
+                animationId = requestAnimationFrame(update);
+            }
+        }
+
+        function startGame() {
+            gameOver = false;
+            particles = [];
+            
+            // Clear canvas completely
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(0, 0, W, H);
+
+            // Spawn Red top, Blue bottom (better for portrait/mobile)
+            players = [
+                new Player(W * 0.5, H * 0.25, '#ef4444', 'Red', 0, imgRedSword),
+                new Player(W * 0.5, H * 0.75, '#3b82f6', 'Blue', Math.PI, imgBlueSword)
+            ];
+
+            if (animationId) cancelAnimationFrame(animationId);
+            update();
+        }
+
+        function endGame(text) {
+            gameOver = true;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, W, H);
+            
+            ctx.font = 'bold 40px sans-serif';
+            if(text.includes("RED")) ctx.fillStyle = '#ef4444';
+            else if(text.includes("BLUE")) ctx.fillStyle = '#3b82f6';
+            else ctx.fillStyle = '#ffffff';
+            
+            ctx.textAlign = 'center';
+            ctx.fillText(text, W/2, H/2);
+            
+            // Auto restart after 3 seconds
+            setTimeout(startGame, 3000);
+        }
+
+        // Start game immediately
+        startGame();
+    </script>
+</body>
+</html>
