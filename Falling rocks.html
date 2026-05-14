@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falling Rocks</title>
+    <style>
+        :root {
+            --grass-bg: #4caf50;
+            --grass-stripe: #43a047;
+            --phone-border: #111;
+            --purple-team: #9c27b0;
+            --black-team: #111111;
+            --red-team: #f44336;
+            --yellow-team: #ffeb3b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #222;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Phone Mockup Styling */
+        .phone {
+            width: 375px;
+            height: 812px;
+            max-width: 95vw;
+            max-height: 95vh;
+            border: 14px solid var(--phone-border);
+            border-radius: 40px;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 0 0 2px #333;
+            /* Grass Pattern Background */
+            background: repeating-linear-gradient(
+                0deg,
+                var(--grass-bg),
+                var(--grass-bg) 40px,
+                var(--grass-stripe) 40px,
+                var(--grass-stripe) 80px
+            );
+            overflow: hidden;
+        }
+
+        /* Score Counters */
+        .score-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-evenly;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .team-tab {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            transform: translateY(-25px); /* Keeps it mostly off screen */
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 4px;
+            box-sizing: border-box;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            font-family: monospace;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 1;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 30;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone">
+        <div class="score-container">
+            <div class="team-tab" style="background-color: var(--purple-team); color: white;">
+                <span id="count-Purple">20</span>
+            </div>
+            <div class="team-tab" style="background-color: var(--black-team); color: white;">
+                <span id="count-Black">20</span>
+            </div>
+            <div class="team-tab" style="background-color: var(--red-team); color: white;">
+                <span id="count-Red">20</span>
+            </div>
+            <div class="team-tab" style="background-color: var(--yellow-team); color: black;">
+                <span id="count-Yellow">20</span>
+            </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="game-over" id="gameOverText">ALL ELIMINATED</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Phone canvas dimensions
+        let width, height;
+
+        // Constants
+        const TEAMS = ['Purple', 'Black', 'Red', 'Yellow'];
+        const TEAM_COLORS = {
+            'Purple': '#9c27b0',
+            'Black': '#111111', 
+            'Red': '#f44336',
+            'Yellow': '#ffeb3b'
+        };
+        const STICKMEN_PER_TEAM = 20;
+        const ROCK_WARNING_DURATION = 5000; // 5 seconds in milliseconds
+        const ROCK_FALL_DURATION = 300;     // 0.3 seconds for the fast drop animation
+        const ROCK_LINGER_DURATION = 1500;  // How long the black rock stays after hitting
+        const ROCK_RADIUS = 35;
+        
+        let stickmen = [];
+        let rocks = [];
+        let lastTime = 0;
+        let lastRockSpawn = 0; // Track spawns for staggered dropping
+
+        // Resize handling
+        function resize() {
+            width = canvas.clientWidth;
+            height = canvas.clientHeight;
+            // Handle high-DPI displays for sharpness
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resize);
+
+        // Stickman Class
+        class Stickman {
+            constructor(team) {
+                this.team = team;
+                this.color = TEAM_COLORS[team];
+                
+                // Spawn randomly within canvas
+                this.x = Math.random() * (width - 40) + 20;
+                this.y = Math.random() * (height - 40) + 20;
+                
+                // Random velocity (slightly slower)
+                this.speed = 1.0 + Math.random() * 1.2;
+                const angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * this.speed;
+                this.vy = Math.sin(angle) * this.speed;
+                
+                this.alive = true;
+            }
+
+            update() {
+                if (!this.alive) return;
+
+                // Wander aimlessly: slightly shift trajectory
+                if (Math.random() < 0.05) {
+                    let angle = Math.atan2(this.vy, this.vx);
+                    angle += (Math.random() - 0.5) * 0.4; // shift angle slightly
+                    this.vx = Math.cos(angle) * this.speed;
+                    this.vy = Math.sin(angle) * this.speed;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Bounce off walls
+                if (this.x < 10) { this.x = 10; this.vx *= -1; }
+                if (this.x > width - 10) { this.x = width - 10; this.vx *= -1; }
+                if (this.y < 10) { this.y = 10; this.vy *= -1; }
+                if (this.y > height - 10) { this.y = height - 10; this.vy *= -1; }
+            }
+
+            draw() {
+                if (!this.alive) return;
+
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                ctx.beginPath();
+                // Head
+                ctx.arc(this.x, this.y - 12, 4, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                // Body
+                ctx.moveTo(this.x, this.y - 8);
+                ctx.lineTo(this.x, this.y + 6);
+                
+                // Arms (swinging based on position creates a slight animation illusion)
+                const armSwing = Math.sin(this.x * 0.2 + this.y * 0.2) * 4;
+                ctx.moveTo(this.x - 6, this.y - 4 + armSwing);
+                ctx.lineTo(this.x, this.y - 6);
+                ctx.lineTo(this.x + 6, this.y - 4 - armSwing);
+                
+                // Legs
+                const legSwing = Math.cos(this.x * 0.2 + this.y * 0.2) * 5;
+                ctx.moveTo(this.x, this.y + 6);
+                ctx.lineTo(this.x - 5, this.y + 14 + legSwing);
+                ctx.moveTo(this.x, this.y + 6);
+                ctx.lineTo(this.x + 5, this.y + 14 - legSwing);
+                
+                ctx.stroke();
+            }
+        }
+
+        // Initialize game entities
+        function init() {
+            resize();
+            stickmen = [];
+            rocks = [];
+            
+            for (let team of TEAMS) {
+                for (let i = 0; i < STICKMEN_PER_TEAM; i++) {
+                    stickmen.push(new Stickman(team));
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Main Game Loop
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const deltaTime = timestamp - lastTime;
+            
+            update(timestamp);
+            draw(timestamp);
+            
+            lastTime = timestamp;
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Update logic
+        function update(timestamp) {
+            // Count total alive for dynamic difficulty checkpoints and update UI
+            let totalAlive = 0;
+            let counts = { 'Purple': 0, 'Black': 0, 'Red': 0, 'Yellow': 0 };
+
+            stickmen.forEach(s => {
+                if (s.alive) {
+                    totalAlive++;
+                    counts[s.team]++;
+                }
+            });
+
+            // Update scoreboard UI
+            TEAMS.forEach(team => {
+                document.getElementById(`count-${team}`).innerText = counts[team];
+            });
+
+            // Determine max concurrent rocks based on checkpoints
+            let maxRocks = 1;
+            if (totalAlive <= 5) maxRocks = 8;
+            else if (totalAlive <= 20) maxRocks = 5;
+            else if (totalAlive <= 40) maxRocks = 3;
+            else if (totalAlive <= 65) maxRocks = 2;
+
+            // Spawn new rocks up to the max, staggered slightly (300ms apart)
+            if (rocks.length < maxRocks && timestamp - lastRockSpawn > 300) {
+                rocks.push({
+                    x: Math.random() * (width - ROCK_RADIUS * 2) + ROCK_RADIUS,
+                    y: Math.random() * (height - ROCK_RADIUS * 2) + ROCK_RADIUS,
+                    spawnTime: timestamp,
+                    state: 'warning', // 'warning', 'falling', 'landed'
+                    radius: ROCK_RADIUS
+                });
+                lastRockSpawn = timestamp;
+            }
+
+            // Update stickmen
+            stickmen.forEach(s => s.update());
+
+            // Process rocks
+            for (let i = rocks.length - 1; i >= 0; i--) {
+                let rock = rocks[i];
+                let timeAlive = timestamp - rock.spawnTime;
+
+                // 1. Warning phase ends, start falling animation
+                if (rock.state === 'warning' && timeAlive >= ROCK_WARNING_DURATION) {
+                    rock.state = 'falling';
+                }
+
+                // 2. Falling animation ends, rock hits ground
+                if (rock.state === 'falling' && timeAlive >= ROCK_WARNING_DURATION + ROCK_FALL_DURATION) {
+                    rock.state = 'landed';
+                    
+                    // Eliminate stick figures caught in the collision
+                    stickmen.forEach(s => {
+                        if (s.alive) {
+                            let dist = Math.hypot(s.x - rock.x, s.y - rock.y);
+                            // Include stickman's approx radius (10) to the collision
+                            if (dist < rock.radius + 10) {
+                                s.alive = false;
+                            }
+                        }
+                    });
+                }
+                
+                // 3. Remove rock after lingering
+                if (rock.state === 'landed' && timeAlive > ROCK_WARNING_DURATION + ROCK_FALL_DURATION + ROCK_LINGER_DURATION) {
+                    rocks.splice(i, 1);
+                }
+            }
+
+            // Show Game Over if everyone is dead
+            if (totalAlive === 0) {
+                document.getElementById('gameOverText').style.display = 'block';
+            }
+        }
+
+        // Render logic
+        function draw(timestamp) {
+            // Clear canvas (background handles grass)
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw rocks below stickmen
+            rocks.forEach(rock => {
+                let timeAlive = timestamp - rock.spawnTime;
+
+                if (rock.state === 'warning') {
+                    let progress = Math.min(1, timeAlive / ROCK_WARNING_DURATION);
+                    
+                    // Transparent yellow warning circle
+                    ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
+                    ctx.beginPath();
+                    ctx.arc(rock.x, rock.y, rock.radius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Subtle countdown ring around the warning
+                    ctx.strokeStyle = 'rgba(255, 235, 59, 0.8)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(rock.x, rock.y, rock.radius, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * progress));
+                    ctx.stroke();
+
+                } else if (rock.state === 'falling') {
+                    let progress = (timeAlive - ROCK_WARNING_DURATION) / ROCK_FALL_DURATION;
+                    progress = Math.min(1, Math.max(0, progress));
+
+                    // Keep warning circle visible under falling rock
+                    ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
+                    ctx.beginPath();
+                    ctx.arc(rock.x, rock.y, rock.radius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Fast falling rock animation
+                    // Starts 3x larger and 200px higher, dropping quickly
+                    let fallingRadius = rock.radius + (rock.radius * 2 * (1 - progress));
+                    let offsetY = -200 * (1 - progress);
+
+                    ctx.fillStyle = '#111111'; // Off-black
+                    ctx.beginPath();
+                    ctx.arc(rock.x, rock.y + offsetY, fallingRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Highlight for the falling rock
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                    ctx.beginPath();
+                    ctx.arc(rock.x - (fallingRadius * 0.15), rock.y + offsetY - (fallingRadius * 0.15), fallingRadius / 2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                } else if (rock.state === 'landed') {
+                    // Black solid circle representing the fallen rock
+                    ctx.fillStyle = '#111111'; // Off-black to look like a rock
+                    ctx.beginPath();
+                    ctx.arc(rock.x, rock.y, rock.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Highlight on the rock to give it a 3D feel
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                    ctx.beginPath();
+                    ctx.arc(rock.x - (rock.radius * 0.15), rock.y - (rock.radius * 0.15), rock.radius / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // Draw stickmen
+            stickmen.forEach(s => s.draw());
+        }
+
+        // Start game
+        // Wait briefly for CSS and layout to render properly before grabbing dimensions
+        setTimeout(() => {
+            init();
+        }, 100);
+
+    </script>
+</body>
+</html>
