@@ -295,7 +295,28 @@
             }
 
             // Check if the physical bodies of the circles are overlapping
-            let bodiesTouching = Math.hypot(p1.x - p2.x, p1.y - p2.y) < (p1.r + p2.r);
+            let dx = p1.x - p2.x;
+            let dy = p1.y - p2.y;
+            let dist = Math.hypot(dx, dy);
+            let minDist = p1.r + p2.r;
+            let bodiesTouching = dist < minDist;
+
+            // 2.5 Circle vs Circle Collision (Physical bump, NO damage)
+            if (bodiesTouching && dist > 0) {
+                // Separate them so they don't get stuck inside each other
+                let overlap = minDist - dist;
+                let nx = dx / dist;
+                let ny = dy / dist;
+                
+                p1.x += nx * (overlap / 2);
+                p1.y += ny * (overlap / 2);
+                p2.x -= nx * (overlap / 2);
+                p2.y -= ny * (overlap / 2);
+
+                // Make them bounce away from each other
+                bouncePlayerOffPoint(p1, p2);
+                bouncePlayerOffPoint(p2, p1);
+            }
 
             // 3. Sword vs Circle Collisions
             // P1 Sword -> P2 Circle
