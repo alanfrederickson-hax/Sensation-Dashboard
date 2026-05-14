@@ -121,6 +121,7 @@
         </div>
         <canvas id="gameCanvas"></canvas>
         <div class="game-over" id="gameOverText">ALL ELIMINATED</div>
+        <div class="game-over" id="winScreen"></div>
     </div>
 
     <script>
@@ -148,11 +149,15 @@
         let rocks = [];
         let lastTime = 0;
         let lastRockSpawn = 0; // Track spawns for staggered dropping
+        let winState = false;
+        let winTime = 0;
+        let winningTeam = null;
 
         // Resize handling
         function resize() {
-            width = canvas.clientWidth;
-            height = canvas.clientHeight;
+            // Use parent dimensions, with fallbacks in case layout hasn't painted yet
+            width = canvas.parentElement.clientWidth || 347; 
+            height = canvas.parentElement.clientHeight || 784;
             // Handle high-DPI displays for sharpness
             const dpr = window.devicePixelRatio || 1;
             canvas.width = width * dpr;
@@ -160,6 +165,13 @@
             ctx.scale(dpr, dpr);
         }
         window.addEventListener('resize', resize);
+
+        // Escape key to return to index.html
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                window.location.href = 'index.html';
+            }
+        });
 
         // Stickman Class
         class Stickman {
@@ -241,6 +253,10 @@
             resize();
             stickmen = [];
             rocks = [];
+            winState = false;
+            winningTeam = null;
+            document.getElementById('gameOverText').style.display = 'none';
+            document.getElementById('winScreen').style.display = 'none';
             
             for (let team of TEAMS) {
                 for (let i = 0; i < STICKMEN_PER_TEAM; i++) {
@@ -257,7 +273,10 @@
             const deltaTime = timestamp - lastTime;
             
             update(timestamp);
-            draw(timestamp);
+            
+            // Pass a frozen timestamp to draw if the game is paused on a win/loss screen
+            let renderTime = winState ? winTime : timestamp;
+            draw(renderTime);
             
             lastTime = timestamp;
             requestAnimationFrame(gameLoop);
@@ -280,6 +299,40 @@
             TEAMS.forEach(team => {
                 document.getElementById(`count-${team}`).innerText = counts[team];
             });
+
+            // Check for win condition (exactly 3 teams have 0, 1 team > 0)
+            let activeTeams = TEAMS.filter(team => counts[team] > 0);
+            let inactiveTeams = TEAMS.filter(team => counts[team] === 0);
+            
+            if (!winState && inactiveTeams.length === 3 && activeTeams.length === 1 && totalAlive > 0 && totalAlive < STICKMEN_PER_TEAM * TEAMS.length) {
+                winState = true;
+                winningTeam = activeTeams[0];
+                winTime = timestamp;
+                let winEl = document.getElementById('winScreen');
+                winEl.innerText = `${winningTeam.toUpperCase()} WINS!`;
+                // Make black team text white so it's readable
+                winEl.style.color = winningTeam === 'Black' ? '#ffffff' : TEAM_COLORS[winningTeam];
+                winEl.style.display = 'block';
+            }
+
+            // Show Game Over if everyone is dead
+            if (totalAlive === 0) {
+                document.getElementById('gameOverText').style.display = 'block';
+                // Trigger the same 10-second restart timer if everyone is wiped out
+                if (!winState) {
+                    winState = true;
+                    winTime = timestamp;
+                }
+            }
+
+            // Restart game 10 seconds after a win or game over
+            if (winState && timestamp - winTime > 10000) {
+                init();
+                return;
+            }
+
+            // PAUSE the game physics and spawning if in win state
+            if (winState) return;
 
             // Determine max concurrent rocks based on checkpoints
             let maxRocks = 1;
@@ -333,11 +386,6 @@
                 if (rock.state === 'landed' && timeAlive > ROCK_WARNING_DURATION + ROCK_FALL_DURATION + ROCK_LINGER_DURATION) {
                     rocks.splice(i, 1);
                 }
-            }
-
-            // Show Game Over if everyone is dead
-            if (totalAlive === 0) {
-                document.getElementById('gameOverText').style.display = 'block';
             }
         }
 
@@ -412,10 +460,16 @@
         }
 
         // Start game
-        // Wait briefly for CSS and layout to render properly before grabbing dimensions
-        setTimeout(() => {
+        // Ensure dimensions are calculated before spawning figures
+        if (document.readyState === 'complete') {
             init();
-        }, 100);
+        } else {
+            window.addEventListener('load', init);
+            // Fallback safety timeout if load event is missed
+            setTimeout(() => {
+                if (stickmen.length === 0) init();
+            }, 300);
+        }
 
     </script>
 </body>
