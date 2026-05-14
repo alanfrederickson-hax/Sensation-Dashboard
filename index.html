@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Sensation Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <link rel="icon" type="image/png" href="logo.png">
-  
   <style>
     @keyframes popIn {
       0% { transform: scale(0); opacity: 0; }
@@ -362,25 +359,32 @@
               addEliminatedFlag(flag);
             }
           } else {
-            const normalX = -dx / distance;
-            const normalY = -dy / distance;
-            const dotProduct = flag.vx * normalX + flag.vy * normalY;
+            // If the gap closed on the flag while it was already mostly OUTSIDE, instantly eliminate it!
+            if (distance > engine.circleRadius) {
+              flag.escaped = true;
+              addEliminatedFlag(flag);
+            } else {
+              // Otherwise, it's a normal bounce INSIDE the circle
+              const normalX = -dx / distance;
+              const normalY = -dy / distance;
+              const dotProduct = flag.vx * normalX + flag.vy * normalY;
 
-            if (dotProduct < 0) {
-              const bounciness = 1.0;
-              let newVx = flag.vx - (1 + bounciness) * dotProduct * normalX;
-              let newVy = flag.vy - (1 + bounciness) * dotProduct * normalY;
+              if (dotProduct < 0) {
+                const bounciness = 1.0;
+                let newVx = flag.vx - (1 + bounciness) * dotProduct * normalX;
+                let newVy = flag.vy - (1 + bounciness) * dotProduct * normalY;
+                
+                const spin = (Math.random() - 0.5) * 0.3;
+                const cosSpin = Math.cos(spin);
+                const sinSpin = Math.sin(spin);
+                
+                flag.vx = newVx * cosSpin - newVy * sinSpin;
+                flag.vy = newVx * sinSpin + newVy * cosSpin;
+              }
               
-              const spin = (Math.random() - 0.5) * 0.3;
-              const cosSpin = Math.cos(spin);
-              const sinSpin = Math.sin(spin);
-              
-              flag.vx = newVx * cosSpin - newVy * sinSpin;
-              flag.vy = newVx * sinSpin + newVy * cosSpin;
+              flag.x = engine.circleX + (engine.circleRadius - flag.radius) * (dx / distance);
+              flag.y = engine.circleY + (engine.circleRadius - flag.radius) * (dy / distance);
             }
-            
-            flag.x = engine.circleX + (engine.circleRadius - flag.radius) * (dx / distance);
-            flag.y = engine.circleY + (engine.circleRadius - flag.radius) * (dy / distance);
           }
         }
       });
