@@ -9,7 +9,12 @@
         body { margin: 0; overflow: hidden; background-color: #0f172a; touch-action: none; user-select: none; -webkit-user-select: none; }
     </style>
 </head>
-<body class="bg-slate-900 flex items-center justify-center min-h-screen p-4">
+<body class="bg-slate-900 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- Back Button -->
+    <a href="index.html" class="mb-6 px-8 py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl shadow-[0_0_15px_rgba(220,38,38,0.5)] border-b-4 border-red-800 transition-transform hover:scale-105 active:scale-95 active:border-b-0 active:translate-y-1 text-center tracking-wider z-20">
+        &larr; BACK
+    </a>
 
     <!-- Phone-shaped container -->
     <div class="relative w-full max-w-[360px] aspect-[9/16] bg-gray-900 border-[12px] border-gray-800 rounded-[2.5rem] overflow-hidden shadow-2xl ring-4 ring-black/50">
@@ -64,6 +69,7 @@
 
         let players = [];
         let particles = [];
+        let floatingTexts = []; // Used for crit popups
         let animationId;
         let gameOver = true;
 
@@ -286,10 +292,12 @@
             if (Math.hypot(p2.x - closest2.x, p2.y - closest2.y) < p2.r + (p1.swordWidth / 2)) {
                 p1Reverses = true; // Sword hit something, reverse it
                 if (p2.hitCooldown <= 0) {
-                    p2.hp -= 1;
+                    let isCrit = Math.random() < 0.15; // 15% chance to crit
+                    p2.hp -= isCrit ? 5 : 1;
                     p2.hitCooldown = 25;
                     bouncePlayerOffPoint(p2, closest2); // Physical bump
                     createSparks(closest2.x, closest2.y, p2.color);
+                    if (isCrit) floatingTexts.push({ x: closest2.x, y: closest2.y - 20, life: 40 });
                 }
             }
 
@@ -299,10 +307,12 @@
             if (Math.hypot(p1.x - closest1.x, p1.y - closest1.y) < p1.r + (p2.swordWidth / 2)) {
                 p2Reverses = true; // Sword hit something, reverse it
                 if (p1.hitCooldown <= 0) {
-                    p1.hp -= 1;
+                    let isCrit = Math.random() < 0.15; // 15% chance to crit
+                    p1.hp -= isCrit ? 5 : 1;
                     p1.hitCooldown = 25;
                     bouncePlayerOffPoint(p1, closest1); // Physical bump
                     createSparks(closest1.x, closest1.y, p1.color);
+                    if (isCrit) floatingTexts.push({ x: closest1.x, y: closest1.y - 20, life: 40 });
                 }
             }
 
@@ -343,6 +353,31 @@
                 }
             }
 
+            // Handle Floating Texts (Crit popup animations)
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                let ft = floatingTexts[i];
+                ft.y -= 1.5; // Float upwards
+                ft.life--;
+                
+                ctx.globalAlpha = Math.min(1, ft.life / 15); // Fade out near the end
+                
+                // Draw Light Blue Exclamation Mark
+                ctx.fillStyle = '#38bdf8'; // light blue
+                ctx.font = '900 60px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('!', ft.x, ft.y);
+                
+                // Draw Red 5 inside the upper vertical bar of the exclamation mark
+                ctx.fillStyle = '#ef4444'; // red
+                ctx.font = '900 20px sans-serif';
+                ctx.fillText('5', ft.x, ft.y - 10);
+                
+                ctx.globalAlpha = 1.0;
+
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+
             // Win Condition
             if (p1.hp <= 0 || p2.hp <= 0) {
                 endGame(p1.hp <= 0 && p2.hp <= 0 ? "Draw!" : (p1.hp <= 0 ? "BLUE WINS!" : "RED WINS!"));
@@ -354,6 +389,7 @@
         function startGame() {
             gameOver = false;
             particles = [];
+            floatingTexts = [];
             
             // Clear canvas completely
             ctx.fillStyle = '#111827';
