@@ -1,372 +1,358 @@
-import React, { useState, useEffect, useRef } from 'react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flag of the Circle</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Animations from React Code */
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+            60% { transform: scale(1.05) translateY(-5px); opacity: 1; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes shrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
 
-// A massive, glorious list of all requested flags
-const rawFlags = "🇦🇫 🇦🇽 🇦🇱 🇩🇿 🇦🇸 🇦🇩 🇦🇴 🇦🇮 🇦🇶 🇦🇬 🇦🇷 🇦🇲 🇦🇼 🇦🇺 🇦🇹 🇦🇿 🇧🇸 🇧🇭 🇧🇩 🇧🇧 🇧🇾 🇧🇪 🇧🇿 🇧🇯 🇧🇲 🇧🇹 🇧🇴 🇧🇦 🇧🇼 🇧🇷 🇮🇴 🇻🇬 🇧🇳 🇧🇬 🇧🇫 🇧🇮 🇰🇭 🇨🇲 🇨🇦 🇮🇨 🇨🇻 🇧🇶 🇰🇾 🇨🇫 🇹🇩 🇨🇱 🇨🇳 🇨🇽 🇨🇨 🇨🇴 🇰🇲 🇨🇬 🇨🇩 🇨🇰 🇨🇷 🇨🇮 🇭🇷 🇨🇺 🇨🇼 🇨🇾 🇨🇿 🇩🇰 🇩🇯 🇩🇲 🇩🇴 🇪🇨 🇪🇬 🇸🇻 🇬🇶 🇪🇷 🇪🇪 🇸🇿 🇪🇹 🇪🇺 🇫🇰 🇫🇴 🇫🇯 🇫🇮 🇫🇷 🇬🇫 🇵🇫 🇹🇫 🇬🇦 🇬🇲 🇬🇪 🇩🇪 🇬🇭 🇬🇮 🇬🇷 🇬🇱 🇬🇩 🇬🇵 🇬🇺 🇬🇹 🇬🇬 🇬🇳 🇬🇼 🇬🇾 🇭🇹 🇭🇳 🇭🇰 🇭🇺 🇮🇸 🇮🇳 🇮🇩 🇮🇷 🇮🇶 🇮🇪 🇮🇲 🇮🇱 🇮🇹 🇯🇲 🇯🇵 🇯🇪 🇯🇴 🇰🇿 🇰🇪 🇰🇮 🇽🇰 🇰🇼 🇰🇬 🇱🇦 🇱🇻 🇱🇧 🇱🇸 🇱🇷 🇱🇾 🇱🇮 🇱🇹 🇱🇺 🇲🇴 🇲🇬 🇲🇼 🇲🇾 🇲🇻 🇲🇱 🇲🇹 🇲🇭 🇲🇶 🇲🇷 🇲🇺 🇾🇹 🇲🇽 🇫🇲 🇲🇩 🇲🇨 🇲🇳 🇲🇪 🇲🇸 🇲🇦 🇲🇿 🇲🇲 🇳🇦 🇳🇷 🇳🇵 🇳🇱 🇳🇨 🇳🇿 🇳🇮 🇳🇪 🇳🇬 🇳🇺 🇳🇫 🇰🇵 🇲🇰 🇲🇵 🇳🇴 🇴🇲 🇵🇰 🇵🇼 🇵🇸 🇵🇦 🇵🇬 🇵🇾 🇵🇪 🇵🇭 🇵🇳 🇵🇱 🇵🇹 🇵🇷 🇶🇦 🇷🇪 🇷🇴 🇷🇺 🇷🇼 🇼🇸 🇸🇲 🇸🇹 🇸🇦 🇸🇳 🇷🇸 🇸🇨 🇸🇱 🇸🇬 🇸🇽 🇸🇰 🇸🇮 🇬🇸 🇸🇧 🇸🇴 🇿🇦 🇰🇷 🇸🇸 🇪🇸 🇱🇰 🇧🇱 🇸🇭 🇰🇳 🇱🇨 🇵🇲 🇻🇨 🇸🇩 🇸🇷 🇸🇪 🇨🇭 🇸🇾 🇹🇼 🇹🇯 🇹🇿 🇹🇭 🇹🇱 🇹🇬 🇹🇰 🇹🇴 🇹🇹 🇹🇳 🇹🇷 🇹🇲 🇹🇨 🇹🇻 🇻🇮 🇺🇬 🇺🇦 🇦🇪 🇬🇧 🏴󠁧󠁢󠁥󠁮󠁧󠁿 🏴󠁧󠁢󠁳󠁣󠁴󠁿 🏴󠁧󠁢󠁷󠁬󠁳󠁿 🇺🇸 🇺🇾 🇺🇿 🇻🇺 🇻🇦 🇻🇪 🇻🇳 🇼🇫 🇪🇭 🇾🇪 🇿🇲 🇿🇼 🇺🇳";
+        .animate-popIn { animation: popIn 0.3s ease-out forwards; }
+        .animate-bounceIn { animation: bounceIn 0.5s ease-out forwards; }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-shrink { animation: shrink 10s linear forwards; }
+    </style>
+</head>
+<body class="min-h-screen w-full bg-gray-100 flex items-center justify-center p-4 font-sans selection:bg-blue-300 m-0">
 
-const getCountryName = (emoji) => {
- const special = {
-   '🏴󠁧󠁢󠁥󠁮󠁧󠁿': 'England', '🏴󠁧󠁢󠁳󠁣󠁴󠁿': 'Scotland', '🏴󠁧󠁢󠁷󠁬󠁳󠁿': 'Wales',
-   '🇺🇳': 'United Nations', '🇪🇺': 'European Union', '🇽🇰': 'Kosovo'
- };
- if (special[emoji]) return special[emoji];
-
- try {
-   const chars = [...emoji];
-   if (chars.length === 2) {
-     // Magically extract the underlying region code from the flag emojis
-     const code = String.fromCharCode(chars[0].codePointAt(0) - 127397) +
-                  String.fromCharCode(chars[1].codePointAt(0) - 127397);
-     const name = new Intl.DisplayNames(['en'], { type: 'region' }).of(code);
-     return name || 'Unknown Region';
-   }
- } catch (e) {
-   return 'Unknown Region';
- }
- return 'Unknown Region';
-};
-
-const FLAGS = rawFlags.split(' ').filter(Boolean).map(emoji => ({
- name: getCountryName(emoji),
- emoji: emoji
-}));
-
-// --- DIVINE OPTIMIZATION: OFFSCREEN EMOJI CACHE ---
-// This stores a pre-rendered image of each emoji so we don't have to render text 15,000 times a second!
-const emojiSpriteCache = {};
-
-const getEmojiSprite = (emoji) => {
- if (emojiSpriteCache[emoji]) return emojiSpriteCache[emoji];
-  const offscreenCanvas = document.createElement('canvas');
- offscreenCanvas.width = 36; // Big enough to hold the emoji
- offscreenCanvas.height = 36;
- const ctx = offscreenCanvas.getContext('2d');
-  ctx.font = '24px Arial';
- ctx.textAlign = 'center';
- ctx.textBaseline = 'middle';
- ctx.fillText(emoji, 18, 18); // Draw it exactly in the center
-  emojiSpriteCache[emoji] = offscreenCanvas;
- return offscreenCanvas;
-};
-
-export default function App() {
- return (
-   <div className="min-h-screen w-full bg-gray-100 flex items-center justify-center p-4 font-sans selection:bg-blue-300">
-     {/* Fixed Mobile Phone Frame */}
-     <div className="relative w-[390px] h-[844px] bg-blue-200 rounded-[3rem] border-[14px] border-white shadow-2xl overflow-hidden flex flex-col shrink-0 ring-4 ring-gray-200/50">
-      
-       {/* Dynamic Light Blue Scratchy Background (Always present) */}
-       <div
-         className="absolute inset-0 opacity-40 mix-blend-color-burn pointer-events-none z-0"
-         style={{
-           backgroundImage: `
-             repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.5) 8px, rgba(255,255,255,0.5) 9px),
-             repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(0,0,0,0.03) 12px, rgba(0,0,0,0.03) 13px),
-             url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E")
-           `
-         }}
-       />
-
-       <GameFlagCircle />
-
-     </div>
-   </div>
- );
-}
-
-// --- VIEW 3: FLAG OF THE CIRCLE GAME ---
-function GameFlagCircle() {
- const canvasRef = useRef(null);
- const contentRef = useRef(null); // The new Overflow Sensor
- const [eliminatedFlags, setEliminatedFlags] = useState([]);
- const [remainingCount, setRemainingCount] = useState(FLAGS.length);
- const [winner, setWinner] = useState(null);
- const [dockScale, setDockScale] = useState({ fontSize: 32, gap: 8 });
-
- // Reset dock scale when game restarts
- useEffect(() => {
-   if (eliminatedFlags.length === 0) {
-     setDockScale({ fontSize: 32, gap: 8 });
-   }
- }, [eliminatedFlags.length]);
-
- // Dynamically shrink the flags ONLY when they run out of space!
- useEffect(() => {
-   if (contentRef.current) {
-     const { scrollHeight, clientHeight } = contentRef.current;
-     // If the content is taller than the visible container, squeeze them down!
-     if (scrollHeight > clientHeight && dockScale.fontSize > 10) {
-       setDockScale(prev => ({
-         fontSize: prev.fontSize - 2,
-         gap: Math.max(1, prev.gap - 1)
-       }));
-     }
-   }
- }, [eliminatedFlags.length, dockScale]);
-
- // Game Engine State (Mutable, no re-renders on every frame)
- const engine = useRef({
-   flags: [],
-   rotation: 0,
-   circleX: 181, // Perfectly centered (362 inner width / 2)
-   circleY: 260, // Upper center of screen
-   circleRadius: 165, // BIGGER CIRCLE (was 130)
-   gapAngle: Math.PI / 3, // 60 degree gap
-   animationId: null,
-   winnerTimerId: null,
-   hasWon: false // New state to prevent loop glitching
- });
-
- // Initialize Game
- const initGame = () => {
-   setEliminatedFlags([]);
-   setRemainingCount(FLAGS.length);
-   setWinner(null);
-   engine.current.hasWon = false;
-   if (engine.current.winnerTimerId) clearTimeout(engine.current.winnerTimerId);
-
-   engine.current.rotation = 0;
-  
-   // Pick ONE single direction for ALL flags to travel at the start of the round
-   const sharedStartingAngle = Math.random() * Math.PI * 2;
-
-   engine.current.flags = FLAGS.map(flag => {
-     const speed = 0.8; // Lowered speed for maximum zen
-     return {
-       ...flag,
-       sprite: getEmojiSprite(flag.emoji), // Pre-load the high-speed image sprite!
-       x: engine.current.circleX + (Math.random() * 200 - 100), // Spread out much further (200px area)
-       y: engine.current.circleY + (Math.random() * 200 - 100), // Now they fill up the circle nicely!
-       vx: Math.cos(sharedStartingAngle) * speed,
-       vy: Math.sin(sharedStartingAngle) * speed,
-       radius: 12,
-       escaped: false
-     };
-   });
- };
-
- useEffect(() => {
-   initGame();
-   const canvas = canvasRef.current;
-   const ctx = canvas.getContext('2d');
-
-   const updatePhysics = () => {
-     if (engine.current.flags.filter(f => !f.escaped).length <= 1) return; // Stop physics if won
-
-     engine.current.rotation += 0.006; // Much slower, relaxing circle rotation
-
-     engine.current.flags.forEach(flag => {
-       if (flag.escaped) return;
-
-       // Zero gravity! Just smooth, constant velocity
-       flag.x += flag.vx;
-       flag.y += flag.vy;
-
-       // Force speed to remain perfectly constant (fixes slowdown over time)
-       const currentSpeed = Math.hypot(flag.vx, flag.vy);
-       if (currentSpeed > 0 && Math.abs(currentSpeed - 0.8) > 0.01) {
-         flag.vx = (flag.vx / currentSpeed) * 0.8;
-         flag.vy = (flag.vy / currentSpeed) * 0.8;
-       }
-
-       // Collision with Circle boundary
-       const dx = flag.x - engine.current.circleX;
-       const dy = flag.y - engine.current.circleY;
-       const distance = Math.sqrt(dx * dx + dy * dy);
-
-       if (distance + flag.radius >= engine.current.circleRadius) {
-         // Calculate angle of flag relative to center
-         let angle = Math.atan2(dy, dx);
+    <!-- Fixed Mobile Phone Frame -->
+    <div class="relative w-[390px] h-[844px] bg-blue-200 rounded-[3rem] border-[14px] border-white shadow-2xl overflow-hidden flex flex-col shrink-0 ring-4 ring-gray-200/50">
         
-         // Normalize local angle against current rotation
-         let localAngle = (angle - engine.current.rotation) % (Math.PI * 2);
-         if (localAngle < 0) localAngle += Math.PI * 2;
+        <!-- Dynamic Light Blue Scratchy Background -->
+        <div class="absolute inset-0 opacity-40 mix-blend-color-burn pointer-events-none z-0"
+             style="background-image: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.5) 8px, rgba(255,255,255,0.5) 9px), repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(0,0,0,0.03) 12px, rgba(0,0,0,0.03) 13px), url('data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' opacity=\'0.4\'/%3E%3C/svg%3E');">
+        </div>
 
-         // Check if inside the gap
-         if (localAngle > 0 && localAngle < engine.current.gapAngle) {
-           // Escaping! Allow it to fly out. Once far enough, mark as fully escaped.
-           if (distance > engine.current.circleRadius + 40) {
-             flag.escaped = true;
+        <!-- Game Interface -->
+        <div class="relative z-10 flex flex-col h-full w-full">
+            <!-- Top Bar -->
+            <div class="absolute top-12 left-0 w-full px-6 flex items-center justify-end z-20">
+                <div id="remaining-display" class="bg-white/60 backdrop-blur-md px-4 py-2 rounded-xl font-bold text-blue-900 shadow-sm border border-white/50">
+                    Remaining: ...
+                </div>
+            </div>
+
+            <!-- Physics Canvas -->
+            <canvas id="game-canvas" width="362" height="500" class="w-[362px] h-[500px] block mt-12"></canvas>
+
+            <!-- Eliminated Flags Dock -->
+            <div class="flex-1 bg-white/40 backdrop-blur-md border-t-2 border-white/60 mt-auto rounded-t-3xl p-4 overflow-hidden flex flex-col">
+                <h3 class="text-center text-xs font-bold text-blue-800 uppercase tracking-widest mb-3 opacity-70 shrink-0">
+                    Eliminated
+                </h3>
+                <div id="dock-content" class="flex-1 flex flex-wrap justify-center content-start overflow-hidden" style="gap: 8px; font-size: 32px;">
+                    <!-- Eliminated flags injected here -->
+                </div>
+            </div>
+
+            <!-- Win Overlay (Hidden by default) -->
+            <div id="win-overlay" class="absolute inset-0 z-50 hidden items-center justify-center bg-blue-900/40 backdrop-blur-sm animate-fadeIn">
+                <div class="bg-white rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-2xl border-4 border-yellow-400 transform animate-bounceIn w-3/4 text-center">
+                    <h2 class="text-yellow-500 font-extrabold text-2xl uppercase tracking-widest mb-2 drop-shadow-sm">Winner!</h2>
+                    <div id="winner-emoji" class="text-7xl mb-4 drop-shadow-xl"></div>
+                    <p id="winner-name" class="text-xl font-bold text-blue-900 mb-6"></p>
+                    <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="bg-blue-500 h-full animate-shrink"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-3 font-medium uppercase">Restarting soon...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // Massive list of all flags
+        const rawFlags = "🇦🇫 🇦🇽 🇦🇱 🇩🇿 🇦🇸 🇦🇩 🇦🇴 🇦🇮 🇦🇶 🇦🇬 🇦🇷 🇦🇲 🇦🇼 🇦🇺 🇦🇹 🇦🇿 🇧🇸 🇧🇭 🇧🇩 🇧🇧 🇧🇾 🇧🇪 🇧🇿 🇧🇯 🇧🇲 🇧🇹 🇧🇴 🇧🇦 🇧🇼 🇧🇷 🇮🇴 🇻🇬 🇧🇳 🇧🇬 🇧🇫 🇧🇮 🇰🇭 🇨🇲 🇨🇦 🇮🇨 🇨🇻 🇧🇶 🇰🇾 🇨🇫 🇹🇩 🇨🇱 🇨🇳 🇨🇽 🇨🇨 🇨🇴 🇰🇲 🇨🇬 🇨🇩 🇨🇰 🇨🇷 🇨🇮 🇭🇷 🇨🇺 🇨🇼 🇨🇾 🇨🇿 🇩🇰 🇩🇯 🇩🇲 🇩🇴 🇪🇨 🇪🇬 🇸🇻 🇬🇶 🇪🇷 🇪🇪 🇸🇿 🇪🇹 🇪🇺 🇫🇰 🇫🇴 🇫🇯 🇫🇮 🇫🇷 🇬🇫 🇵🇫 🇹🇫 🇬🇦 🇬🇲 🇬🇪 🇩🇪 🇬🇭 🇬🇮 🇬🇷 🇬🇱 🇬🇩 🇬🇵 🇬🇺 🇬🇹 🇬🇬 🇬🇳 🇬🇼 🇬🇾 🇭🇹 🇭🇳 🇭🇰 🇭🇺 🇮🇸 🇮🇳 🇮🇩 🇮🇷 🇮🇶 🇮🇪 🇮🇲 🇮🇱 🇮🇹 🇯🇲 🇯🇵 🇯🇪 🇯🇴 🇰🇿 🇰🇪 🇰🇮 🇽🇰 🇰🇼 🇰🇬 🇱🇦 🇱🇻 🇱🇧 🇱🇸 🇱🇷 🇱🇾 🇱🇮 🇱🇹 🇱🇺 🇲🇴 🇲🇬 🇲🇼 🇲🇾 🇲🇻 🇲🇱 🇲🇹 🇲🇭 🇲🇶 🇲🇷 🇲🇺 🇾🇹 🇲🇽 🇫🇲 🇲🇩 🇲🇨 🇲🇳 🇲🇪 🇲🇸 🇲🇦 🇲🇿 🇲🇲 🇳🇦 🇳🇷 🇳🇵 🇳🇱 🇳🇨 🇳🇿 🇳🇮 🇳🇪 🇳🇬 🇳🇺 🇳🇫 🇰🇵 🇲🇰 🇲🇵 🇳🇴 🇴🇲 🇵🇰 🇵🇼 🇵🇸 🇵🇦 🇵🇬 🇵🇾 🇵🇪 🇵🇭 🇵🇳 🇵🇱 🇵🇹 🇵🇷 🇶🇦 🇷🇪 🇷🇴 🇷🇺 🇷🇼 🇼🇸 🇸🇲 🇸🇹 🇸🇦 🇸🇳 🇷🇸 🇸🇨 🇸🇱 🇸🇬 🇸🇽 🇸🇰 🇸🇮 🇬🇸 🇸🇧 🇸🇴 🇿🇦 🇰🇷 🇸🇸 🇪🇸 🇱🇰 🇧🇱 🇸🇭 🇰🇳 🇱🇨 🇵🇲 🇻🇨 🇸🇩 🇸🇷 🇸🇪 🇨🇭 🇸🇾 🇹🇼 🇹🇯 🇹🇿 🇹🇭 🇹🇱 🇹🇬 🇹🇰 🇹🇴 🇹🇹 🇹🇳 🇹🇷 🇹🇲 🇹🇨 🇹🇻 🇻🇮 🇺🇬 🇺🇦 🇦🇪 🇬🇧 🏴󠁧󠁢󠁥󠁮󠁧󠁿 🏴󠁧󠁢󠁳󠁣󠁴󠁿 🏴󠁧󠁢󠁷󠁬󠁳󠁿 🇺🇸 🇺🇾 🇺🇿 🇻🇺 🇻🇦 🇻🇪 🇻🇳 🇼🇫 🇪🇭 🇾🇪 🇿🇲 🇿🇼 🇺🇳";
+
+        const getCountryName = (emoji) => {
+            const special = {
+                '🏴󠁧󠁢󠁥󠁮󠁧󠁿': 'England', '🏴󠁧󠁢󠁳󠁣󠁴󠁿': 'Scotland', '🏴󠁧󠁢󠁷󠁬󠁳󠁿': 'Wales',
+                '🇺🇳': 'United Nations', '🇪🇺': 'European Union', '🇽🇰': 'Kosovo'
+            };
+            if (special[emoji]) return special[emoji];
+
+            try {
+                const chars = [...emoji];
+                if (chars.length === 2) {
+                    const code = String.fromCharCode(chars[0].codePointAt(0) - 127397) +
+                                 String.fromCharCode(chars[1].codePointAt(0) - 127397);
+                    const name = new Intl.DisplayNames(['en'], { type: 'region' }).of(code);
+                    return name || 'Unknown Region';
+                }
+            } catch (e) {
+                return 'Unknown Region';
+            }
+            return 'Unknown Region';
+        };
+
+        const FLAGS = rawFlags.split(' ').filter(Boolean).map(emoji => ({
+            name: getCountryName(emoji),
+            emoji: emoji
+        }));
+
+        // --- DIVINE OPTIMIZATION: OFFSCREEN EMOJI CACHE ---
+        const emojiSpriteCache = {};
+
+        const getEmojiSprite = (emoji) => {
+            if (emojiSpriteCache[emoji]) return emojiSpriteCache[emoji];
+            const offscreenCanvas = document.createElement('canvas');
+            offscreenCanvas.width = 36;
+            offscreenCanvas.height = 36;
+            const ctx = offscreenCanvas.getContext('2d');
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(emoji, 18, 18);
+            emojiSpriteCache[emoji] = offscreenCanvas;
+            return offscreenCanvas;
+        };
+
+        // DOM Elements
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const remainingDisplay = document.getElementById('remaining-display');
+        const dockContent = document.getElementById('dock-content');
+        const winOverlay = document.getElementById('win-overlay');
+        const winnerEmojiEl = document.getElementById('winner-emoji');
+        const winnerNameEl = document.getElementById('winner-name');
+        const progressBar = document.getElementById('progress-bar');
+
+        // Game State variables
+        let eliminatedFlags = [];
+        let remainingCount = FLAGS.length;
+        let dockScale = { fontSize: 32, gap: 8 };
+        
+        let engine = {
+            flags: [],
+            rotation: 0,
+            circleX: 181,
+            circleY: 260,
+            circleRadius: 165,
+            gapAngle: Math.PI / 3,
+            animationId: null,
+            winnerTimerId: null,
+            hasWon: false
+        };
+
+        // --- Core UI Functions ---
+
+        const updateRemainingText = () => {
+            remainingDisplay.innerText = `Remaining: ${remainingCount}`;
+        };
+
+        const dynamicallyShrinkDock = () => {
+            const { scrollHeight, clientHeight } = dockContent;
+            if (scrollHeight > clientHeight && dockScale.fontSize > 10) {
+                dockScale.fontSize -= 2;
+                dockScale.gap = Math.max(1, dockScale.gap - 1);
+                
+                dockContent.style.fontSize = `${dockScale.fontSize}px`;
+                dockContent.style.gap = `${dockScale.gap}px`;
+                
+                // Recursively check until it fits
+                dynamicallyShrinkDock();
+            }
+        };
+
+        const eliminateFlag = (flag) => {
+            eliminatedFlags.push(flag);
+            remainingCount--;
+            updateRemainingText();
+
+            // Append to DOM dock
+            const el = document.createElement('div');
+            el.className = 'animate-popIn leading-none flex items-center justify-center';
+            el.title = flag.name;
+            el.innerText = flag.emoji;
+            dockContent.appendChild(el);
+
+            dynamicallyShrinkDock();
+        };
+
+        const triggerWin = (winner) => {
+            winnerEmojiEl.innerText = winner.emoji;
+            winnerNameEl.innerText = winner.name;
             
-             // Update React state (throttled naturally by escapes)
-             setEliminatedFlags(prev => [...prev, flag]);
-             setRemainingCount(prev => prev - 1);
-           }
-         } else {
-           // The wall caught up to the flag! 
-           // If it was already on its way out, delete it instead of teleporting it back.
-           if (distance > engine.current.circleRadius - flag.radius + 1) {
-             flag.escaped = true;
-             setEliminatedFlags(prev => [...prev, flag]);
-             setRemainingCount(prev => prev - 1);
-           } else {
-             // Bounce off the wall normally (it is safely inside)
-             const normalX = -dx / distance;
-             const normalY = -dy / distance;
-             const dotProduct = flag.vx * normalX + flag.vy * normalY;
+            winOverlay.classList.remove('hidden');
+            winOverlay.classList.add('flex');
 
-             // Only bounce if moving towards the wall
-             if (dotProduct < 0) {
-               const bounciness = 1.0; // Perfect elastic bounce
-               let newVx = flag.vx - (1 + bounciness) * dotProduct * normalX;
-               let newVy = flag.vy - (1 + bounciness) * dotProduct * normalY;
-              
-               // Add a tiny random spin to the bounce so they don't get stuck in a straight line
-               const spin = (Math.random() - 0.5) * 0.3; // Random angle offset
-               const cosSpin = Math.cos(spin);
-               const sinSpin = Math.sin(spin);
-              
-               flag.vx = newVx * cosSpin - newVy * sinSpin;
-               flag.vy = newVx * sinSpin + newVy * cosSpin;
-             }
-            
-             // Keep perfectly inside to prevent glitching through
-             flag.x = engine.current.circleX + (engine.current.circleRadius - flag.radius) * (dx / distance);
-             flag.y = engine.current.circleY + (engine.current.circleRadius - flag.radius) * (dy / distance);
-           }
-         }
-       }
-     });
-   };
+            // Force reflow to restart CSS progress bar animation
+            progressBar.classList.remove('animate-shrink');
+            void progressBar.offsetWidth;
+            progressBar.classList.add('animate-shrink');
 
-   const draw = () => {
-     ctx.clearRect(0, 0, canvas.width, canvas.height);
+            engine.winnerTimerId = setTimeout(() => {
+                winOverlay.classList.add('hidden');
+                winOverlay.classList.remove('flex');
+                initGame();
+            }, 10000);
+        };
 
-     // Draw Rotating Circle
-     ctx.beginPath();
-     ctx.arc(
-       engine.current.circleX,
-       engine.current.circleY,
-       engine.current.circleRadius,
-       engine.current.rotation + engine.current.gapAngle,
-       engine.current.rotation + Math.PI * 2
-     );
-     ctx.lineWidth = 10;
-     ctx.strokeStyle = '#1e3a8a'; // Deep blue ring
-     ctx.lineCap = 'round';
-     ctx.stroke();
+        // --- Physics & Game Loop ---
 
-     // Draw active flags using ULTRA-FAST Image Stamping instead of text rendering!
-     engine.current.flags.forEach(flag => {
-       if (!flag.escaped) {
-         // -18 perfectly centers the 36x36 sprite on the flag's x/y coordinates
-         ctx.drawImage(flag.sprite, flag.x - 18, flag.y - 18);
-       }
-     });
-   };
+        const initGame = () => {
+            // Reset state variables
+            eliminatedFlags = [];
+            remainingCount = FLAGS.length;
+            dockScale = { fontSize: 32, gap: 8 };
+            engine.hasWon = false;
+            if (engine.winnerTimerId) clearTimeout(engine.winnerTimerId);
 
-   const loop = () => {
-     updatePhysics();
-     draw();
-    
-     // Check Win Condition safely
-     const activeFlags = engine.current.flags.filter(f => !f.escaped);
-     if (activeFlags.length === 1 && !engine.current.hasWon) {
-       engine.current.hasWon = true; // Lock the win state
-       setWinner(activeFlags[0]);
-     }
-    
-     // Keep the animation loop running forever so it easily picks up the restart
-     engine.current.animationId = requestAnimationFrame(loop);
-   };
+            // Reset UI
+            updateRemainingText();
+            dockContent.innerHTML = '';
+            dockContent.style.fontSize = `${dockScale.fontSize}px`;
+            dockContent.style.gap = `${dockScale.gap}px`;
 
-   engine.current.animationId = requestAnimationFrame(loop);
+            engine.rotation = 0;
+            const sharedStartingAngle = Math.random() * Math.PI * 2;
 
-   return () => {
-     cancelAnimationFrame(engine.current.animationId);
-     if (engine.current.winnerTimerId) clearTimeout(engine.current.winnerTimerId);
-   };
- }, []);
+            engine.flags = FLAGS.map(flag => {
+                const speed = 0.8;
+                return {
+                    ...flag,
+                    sprite: getEmojiSprite(flag.emoji),
+                    x: engine.circleX + (Math.random() * 200 - 100),
+                    y: engine.circleY + (Math.random() * 200 - 100),
+                    vx: Math.cos(sharedStartingAngle) * speed,
+                    vy: Math.sin(sharedStartingAngle) * speed,
+                    radius: 12,
+                    escaped: false
+                };
+            });
+        };
 
- // Handle Win State Timer
- useEffect(() => {
-   if (winner) {
-     engine.current.winnerTimerId = setTimeout(() => {
-       initGame(); // Restart the variables, and the running loop will automatically draw the new flags
-     }, 10000);
-   }
-   return () => {
-      if (engine.current.winnerTimerId) clearTimeout(engine.current.winnerTimerId);
-   }
- }, [winner]);
+        const updatePhysics = () => {
+            const activeFlags = engine.flags.filter(f => !f.escaped);
+            if (activeFlags.length <= 1) return;
 
+            engine.rotation += 0.006;
 
- return (
-   <div className="relative z-10 flex flex-col h-full w-full">
-     {/* Top Bar */}
-     <div className="absolute top-12 left-0 w-full px-6 flex items-center justify-end z-20">
-       <div className="bg-white/60 backdrop-blur-md px-4 py-2 rounded-xl font-bold text-blue-900 shadow-sm border border-white/50">
-         Remaining: {remainingCount}
-       </div>
-     </div>
+            engine.flags.forEach(flag => {
+                if (flag.escaped) return;
 
-     {/* Physics Canvas */}
-     <canvas
-       ref={canvasRef}
-       width={362}
-       height={500}
-       className="w-[362px] h-[500px] block mt-12"
-     />
+                flag.x += flag.vx;
+                flag.y += flag.vy;
 
-     {/* Eliminated Flags Dock */}
-     <div className="flex-1 bg-white/40 backdrop-blur-md border-t-2 border-white/60 mt-auto rounded-t-3xl p-4 overflow-hidden flex flex-col">
-       <h3 className="text-center text-xs font-bold text-blue-800 uppercase tracking-widest mb-3 opacity-70 shrink-0">
-         Eliminated
-       </h3>
-       <div
-         ref={contentRef}
-         className="flex-1 flex flex-wrap justify-center content-start overflow-hidden"
-         style={{
-           gap: `${dockScale.gap}px`,
-           fontSize: `${dockScale.fontSize}px`
-         }}
-       >
-         {eliminatedFlags.map((flag, idx) => (
-           <div
-             key={idx}
-             className="animate-[popIn_0.3s_ease-out] leading-none flex items-center justify-center"
-             title={flag.name}
-           >
-             {flag.emoji}
-           </div>
-         ))}
-       </div>
-     </div>
+                // Force constant speed
+                const currentSpeed = Math.hypot(flag.vx, flag.vy);
+                if (currentSpeed > 0 && Math.abs(currentSpeed - 0.8) > 0.01) {
+                    flag.vx = (flag.vx / currentSpeed) * 0.8;
+                    flag.vy = (flag.vy / currentSpeed) * 0.8;
+                }
 
-     {/* Win Overlay */}
-     {winner && (
-       <div className="absolute inset-0 z-50 flex items-center justify-center bg-blue-900/40 backdrop-blur-sm animate-[fadeIn_0.5s_ease-out]">
-         <div className="bg-white rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-2xl border-4 border-yellow-400 transform animate-[bounceIn_0.5s_ease-out] w-3/4 text-center">
-           <h2 className="text-yellow-500 font-extrabold text-2xl uppercase tracking-widest mb-2 drop-shadow-sm">Winner!</h2>
-           <div className="text-7xl mb-4 drop-shadow-xl">{winner.emoji}</div>
-           <p className="text-xl font-bold text-blue-900 mb-6">{winner.name}</p>
-           <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-              <div className="bg-blue-500 h-full animate-[shrink_10s_linear]"></div>
-           </div>
-           <p className="text-xs text-gray-400 mt-3 font-medium uppercase">Restarting soon...</p>
-         </div>
-       </div>
-     )}
+                // Collision Detection
+                const dx = flag.x - engine.circleX;
+                const dy = flag.y - engine.circleY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
-     <style dangerouslySetInnerHTML={{__html: `
-       @keyframes popIn {
-         0% { transform: scale(0); opacity: 0; }
-         80% { transform: scale(1.2); }
-         100% { transform: scale(1); opacity: 1; }
-       }
-       @keyframes bounceIn {
-         0% { transform: scale(0.8) translateY(20px); opacity: 0; }
-         60% { transform: scale(1.05) translateY(-5px); opacity: 1; }
-         100% { transform: scale(1) translateY(0); opacity: 1; }
-       }
-       @keyframes fadeIn {
-         from { opacity: 0; }
-         to { opacity: 1; }
-       }
-       @keyframes shrink {
-         from { width: 100%; }
-         to { width: 0%; }
-       }
-     `}} />
-   </div>
- );
-}
+                if (distance + flag.radius >= engine.circleRadius) {
+                    let angle = Math.atan2(dy, dx);
+                    let localAngle = (angle - engine.rotation) % (Math.PI * 2);
+                    if (localAngle < 0) localAngle += Math.PI * 2;
+
+                    // Escaping through the gap
+                    if (localAngle > 0 && localAngle < engine.gapAngle) {
+                        if (distance > engine.circleRadius + 40) {
+                            flag.escaped = true;
+                            eliminateFlag(flag);
+                        }
+                    } else {
+                        // Bouncing / Being trapped
+                        if (distance > engine.circleRadius - flag.radius + 1) {
+                            flag.escaped = true;
+                            eliminateFlag(flag);
+                        } else {
+                            const normalX = -dx / distance;
+                            const normalY = -dy / distance;
+                            const dotProduct = flag.vx * normalX + flag.vy * normalY;
+
+                            if (dotProduct < 0) {
+                                const bounciness = 1.0;
+                                let newVx = flag.vx - (1 + bounciness) * dotProduct * normalX;
+                                let newVy = flag.vy - (1 + bounciness) * dotProduct * normalY;
+
+                                const spin = (Math.random() - 0.5) * 0.3;
+                                const cosSpin = Math.cos(spin);
+                                const sinSpin = Math.sin(spin);
+
+                                flag.vx = newVx * cosSpin - newVy * sinSpin;
+                                flag.vy = newVx * sinSpin + newVy * cosSpin;
+                            }
+
+                            flag.x = engine.circleX + (engine.circleRadius - flag.radius) * (dx / distance);
+                            flag.y = engine.circleY + (engine.circleRadius - flag.radius) * (dy / distance);
+                        }
+                    }
+                }
+            });
+        };
+
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Rotating Circle
+            ctx.beginPath();
+            ctx.arc(
+                engine.circleX,
+                engine.circleY,
+                engine.circleRadius,
+                engine.rotation + engine.gapAngle,
+                engine.rotation + Math.PI * 2
+            );
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = '#1e3a8a';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Draw Flags via Sprite Image stamps
+            engine.flags.forEach(flag => {
+                if (!flag.escaped) {
+                    ctx.drawImage(flag.sprite, flag.x - 18, flag.y - 18);
+                }
+            });
+        };
+
+        const loop = () => {
+            updatePhysics();
+            draw();
+
+            // Check Win Condition
+            const activeFlags = engine.flags.filter(f => !f.escaped);
+            if (activeFlags.length === 1 && !engine.hasWon) {
+                engine.hasWon = true;
+                triggerWin(activeFlags[0]);
+            }
+
+            engine.animationId = requestAnimationFrame(loop);
+        };
+
+        // Bootstrap on load
+        window.onload = () => {
+            initGame();
+            engine.animationId = requestAnimationFrame(loop);
+        };
+    </script>
+</body>
+</html>
