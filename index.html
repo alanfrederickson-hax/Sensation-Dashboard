@@ -20,10 +20,6 @@
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    @keyframes shrink {
-      from { width: 100%; }
-      to { width: 0%; }
-    }
     /* Hide scrollbar for dashboard */
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
@@ -88,99 +84,13 @@
       <div id="dashboard-grid" class="grid grid-cols-3 gap-4 overflow-y-auto pb-10 scrollbar-hide"></div>
     </div>
 
-    <!-- ================= VIEW 3: FLAG OF THE CIRCLE GAME ================= -->
-    <div id="view-game" class="relative z-10 hidden flex-col h-full w-full">
-      <!-- Top Bar -->
-      <div class="absolute top-12 left-0 w-full px-6 flex items-center justify-between z-20">
-        <button onclick="exitGame()" class="p-3 bg-white/50 rounded-xl hover:bg-white/80 transition-colors shadow-sm backdrop-blur-md">
-          <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <div class="bg-white/60 backdrop-blur-md px-4 py-2 rounded-xl font-bold text-blue-900 shadow-sm border border-white/50">
-          Remaining: <span id="ui-remaining-count">0</span>
-        </div>
-      </div>
-
-      <!-- Physics Canvas -->
-      <canvas id="game-canvas" width="362" height="500" class="w-[362px] h-[500px] block mt-12"></canvas>
-
-      <!-- Eliminated Flags Dock -->
-      <div class="flex-1 bg-white/40 backdrop-blur-md border-t-2 border-white/60 mt-auto rounded-t-3xl p-4 overflow-hidden flex flex-col">
-        <h3 class="text-center text-xs font-bold text-blue-800 uppercase tracking-widest mb-3 opacity-70 shrink-0">
-          Eliminated
-        </h3>
-        <div id="dock-content" class="flex-1 flex flex-wrap justify-center content-start overflow-hidden" style="gap: 8px; font-size: 32px;">
-          <!-- Dynamically populated -->
-        </div>
-      </div>
-
-      <!-- Win Overlay -->
-      <div id="win-overlay" class="absolute inset-0 z-50 hidden items-center justify-center bg-blue-900/40 backdrop-blur-sm animate-[fadeIn_0.5s_ease-out]">
-        <div class="bg-white rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-2xl border-4 border-yellow-400 transform animate-[bounceIn_0.5s_ease-out] w-3/4 text-center">
-          <h2 class="text-yellow-500 font-extrabold text-2xl uppercase tracking-widest mb-2 drop-shadow-sm">Winner!</h2>
-          <div id="win-emoji" class="text-7xl mb-4 drop-shadow-xl"></div>
-          <p id="win-name" class="text-xl font-bold text-blue-900 mb-6"></p>
-          <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-             <div class="bg-blue-500 h-full animate-[shrink_10s_linear]"></div>
-          </div>
-          <p class="text-xs text-gray-400 mt-3 font-medium uppercase">Restarting soon...</p>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <script>
     // ==========================================
-    // 1. DATA & INITIALIZATION
+    // 1. VIEW NAVIGATION & DASHBOARD LOGIC
     // ==========================================
-    const rawFlags = "🇦🇫 🇦🇽 🇦🇱 🇩🇿 🇦🇸 🇦🇩 🇦🇴 🇦🇮 🇦🇶 🇦🇬 🇦🇷 🇦🇲 🇦🇼 🇦🇺 🇦🇹 🇦🇿 🇧🇸 🇧🇭 🇧🇩 🇧🇧 🇧🇾 🇧🇪 🇧🇿 🇧🇯 🇧🇲 🇧🇹 🇧🇴 🇧🇦 🇧🇼 🇧🇷 🇮🇴 🇻🇬 🇧🇳 🇧🇬 🇧🇫 🇧🇮 🇰🇭 🇨🇲 🇨🇦 🇮🇨 🇨🇻 🇧🇶 🇰🇾 🇨🇫 🇹🇩 🇨🇱 🇨🇳 🇨🇽 🇨🇨 🇨🇴 🇰🇲 🇨🇬 🇨🇩 🇨🇰 🇨🇷 🇨🇮 🇭🇷 🇨🇺 🇨🇼 🇨🇾 🇨🇿 🇩🇰 🇩🇯 🇩🇲 🇩🇴 🇪🇨 🇪🇬 🇸🇻 🇬🇶 🇪🇷 🇪🇪 🇸🇿 🇪🇹 🇪🇺 🇫🇰 🇫🇴 🇫🇯 🇫🇮 🇫🇷 🇬🇫 🇵🇫 🇹🇫 🇬🇦 🇬🇲 🇬🇪 🇩🇪 🇬🇭 🇬🇮 🇬🇷 🇬🇱 🇬🇩 🇬🇵 🇬🇺 🇬🇹 🇬🇬 🇬🇳 🇬🇼 🇬🇾 🇭🇹 🇭🇳 🇭🇰 🇭🇺 🇮🇸 🇮🇳 🇮🇩 🇮🇷 🇮🇶 🇮🇪 🇮🇲 🇮🇱 🇮🇹 🇯🇲 🇯🇵 🇯🇪 🇯🇴 🇰🇿 🇰🇪 🇰🇮 🇽🇰 🇰🇼 🇰🇬 🇱🇦 🇱🇻 🇱🇧 🇱🇸 🇱🇷 🇱🇾 🇱🇮 🇱🇹 🇱🇺 🇲🇴 🇲🇬 🇲🇼 🇲🇾 🇲🇻 🇲🇱 🇲🇹 🇲🇭 🇲🇶 🇲🇷 🇲🇺 🇾🇹 🇲🇽 🇫🇲 🇲🇩 🇲🇨 🇲🇳 🇲🇪 🇲🇸 🇲🇦 🇲🇿 🇲🇲 🇳🇦 🇳🇷 🇳🇵 🇳🇱 🇳🇨 🇳🇿 🇳🇮 🇳🇪 🇳🇬 🇳🇺 🇳🇫 🇰🇵 🇲🇰 🇲🇵 🇳🇴 🇴🇲 🇵🇰 🇵🇼 🇵🇸 🇵🇦 🇵🇬 🇵🇾 🇵🇪 🇵🇭 🇵🇳 🇵🇱 🇵🇹 🇵🇷 🇶🇦 🇷🇪 🇷🇴 🇷🇺 🇷🇼 🇼🇸 🇸🇲 🇸🇹 🇸🇦 🇸🇳 🇷🇸 🇸🇨 🇸🇱 🇸🇬 🇸🇽 🇸🇰 🇸🇮 🇬🇸 🇸🇧 🇸🇴 🇿🇦 🇰🇷 🇸🇸 🇪🇸 🇱🇰 🇧🇱 🇸🇭 🇰🇳 🇱🇨 🇵🇲 🇻🇨 🇸🇩 🇸🇷 🇸🇪 🇨🇭 🇸🇾 🇹🇼 🇹🇯 🇹🇿 🇹🇭 🇹🇱 🇹🇬 🇹🇰 🇹🇴 🇹🇹 🇹🇳 🇹🇷 🇹🇲 🇹🇨 🇹🇻 🇻🇮 🇺🇬 🇺🇦 🇦🇪 🇬🇧 🏴󠁧󠁢󠁥󠁮󠁧󠁿 🏴󠁧󠁢󠁳󠁣󠁴󠁿 🏴󠁧󠁢󠁷󠁬󠁳󠁿 🇺🇸 🇺🇾 🇺🇿 🇻🇺 🇻🇦 🇻🇪 🇻🇳 🇼🇫 🇪🇭 🇾🇪 🇿🇲 🇿🇼 🇺🇳";
-
-    const getCountryName = (emoji) => {
-      const special = {
-        '🏴󠁧󠁢󠁥󠁮󠁧󠁿': 'England', '🏴󠁧󠁢󠁳󠁣󠁴󠁿': 'Scotland', '🏴󠁧󠁢󠁷󠁬󠁳󠁿': 'Wales',
-        '🇺🇳': 'United Nations', '🇪🇺': 'European Union', '🇽🇰': 'Kosovo'
-      };
-      if (special[emoji]) return special[emoji];
-
-      try {
-        const chars = [...emoji];
-        if (chars.length === 2) {
-          const code = String.fromCharCode(chars[0].codePointAt(0) - 127397) +
-                       String.fromCharCode(chars[1].codePointAt(0) - 127397);
-          const name = new Intl.DisplayNames(['en'], { type: 'region' }).of(code);
-          return name || 'Unknown Region';
-        }
-      } catch (e) {
-        return 'Unknown Region';
-      }
-      return 'Unknown Region';
-    };
-
-    const FLAGS = rawFlags.split(' ').filter(Boolean).map(emoji => ({
-      name: getCountryName(emoji),
-      emoji: emoji
-    }));
-
-    // DIVINE OPTIMIZATION: OFFSCREEN EMOJI CACHE
-    const emojiSpriteCache = {};
-    const getEmojiSprite = (emoji) => {
-      if (emojiSpriteCache[emoji]) return emojiSpriteCache[emoji];
-      const offscreenCanvas = document.createElement('canvas');
-      offscreenCanvas.width = 36;
-      offscreenCanvas.height = 36;
-      const ctx = offscreenCanvas.getContext('2d');
-      ctx.font = '24px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(emoji, 18, 18);
-      emojiSpriteCache[emoji] = offscreenCanvas;
-      return offscreenCanvas;
-    };
-
-    // ==========================================
-    // 2. VIEW NAVIGATION & DASHBOARD LOGIC
-    // ==========================================
-    const views = ['view-start', 'view-dashboard', 'view-game'];
+    const views = ['view-start', 'view-dashboard'];
     let currentViewId = 'view-start';
 
     function switchView(viewName) {
@@ -192,10 +102,6 @@
       targetView.classList.remove('hidden');
       targetView.classList.add('flex');
       currentViewId = `view-${viewName}`;
-
-      if (viewName === 'game') {
-        startGame();
-      }
     }
 
     // Generate Dashboard Grid
@@ -205,7 +111,7 @@
       if (i === 0 || i === 1 || i === 2) {
         btn.className = "aspect-square rounded-2xl flex flex-col items-center justify-center p-2 transition-all shadow-md backdrop-blur-sm border-2 bg-neutral-900 hover:bg-neutral-800 border-neutral-700 hover:scale-105 active:scale-95";
         btn.onclick = () => {
-          if (i === 0) switchView('game');
+          if (i === 0) window.location.href = 'flagofthecirc.HTML';
           if (i === 1) window.location.href = 'CircleSlash.HTML';
           if (i === 2) window.location.href = 'FallingRocks.html';
         };
@@ -231,214 +137,6 @@
         btn.innerHTML = `<div class="w-4 h-4 rounded-full bg-neutral-700/50"></div>`;
       }
       gridContainer.appendChild(btn);
-    }
-
-    // ==========================================
-    // 3. FLAG CIRCLE GAME ENGINE
-    // ==========================================
-    const canvas = document.getElementById('game-canvas');
-    const ctx = canvas.getContext('2d');
-    const dockContent = document.getElementById('dock-content');
-    const uiRemaining = document.getElementById('ui-remaining-count');
-    const winOverlay = document.getElementById('win-overlay');
-    const winEmojiEl = document.getElementById('win-emoji');
-    const winNameEl = document.getElementById('win-name');
-
-    let engine = {
-      flags: [],
-      rotation: 0,
-      circleX: 181, 
-      circleY: 260, 
-      circleRadius: 165,
-      gapAngle: Math.PI / 3,
-      animationId: null,
-      winnerTimerId: null,
-      hasWon: false,
-      remainingCount: 0
-    };
-
-    let dockScale = { fontSize: 32, gap: 8 };
-
-    function checkDockOverflow() {
-      if (dockContent.scrollHeight > dockContent.clientHeight && dockScale.fontSize > 10) {
-        dockScale.fontSize -= 2;
-        dockScale.gap = Math.max(1, dockScale.gap - 1);
-        dockContent.style.fontSize = `${dockScale.fontSize}px`;
-        dockContent.style.gap = `${dockScale.gap}px`;
-        // Recursively check until it fits
-        checkDockOverflow(); 
-      }
-    }
-
-    function addEliminatedFlag(flag) {
-      engine.remainingCount--;
-      uiRemaining.innerText = engine.remainingCount;
-
-      const el = document.createElement('div');
-      el.className = "animate-[popIn_0.3s_ease-out] leading-none flex items-center justify-center";
-      el.title = flag.name;
-      el.innerText = flag.emoji;
-      dockContent.appendChild(el);
-
-      checkDockOverflow();
-    }
-
-    function startGame() {
-      // Reset State
-      engine.hasWon = false;
-      engine.remainingCount = FLAGS.length;
-      uiRemaining.innerText = engine.remainingCount;
-      dockContent.innerHTML = '';
-      dockScale = { fontSize: 32, gap: 8 };
-      dockContent.style.fontSize = `${dockScale.fontSize}px`;
-      dockContent.style.gap = `${dockScale.gap}px`;
-      
-      winOverlay.classList.add('hidden');
-      winOverlay.classList.remove('flex');
-      
-      if (engine.winnerTimerId) clearTimeout(engine.winnerTimerId);
-      if (engine.animationId) cancelAnimationFrame(engine.animationId);
-
-      engine.rotation = 0;
-      const sharedStartingAngle = Math.random() * Math.PI * 2;
-
-      engine.flags = FLAGS.map(flag => {
-        const speed = 0.8;
-        return {
-          ...flag,
-          sprite: getEmojiSprite(flag.emoji),
-          x: engine.circleX + (Math.random() * 200 - 100),
-          y: engine.circleY + (Math.random() * 200 - 100),
-          vx: Math.cos(sharedStartingAngle) * speed,
-          vy: Math.sin(sharedStartingAngle) * speed,
-          radius: 12,
-          escaped: false
-        };
-      });
-
-      engine.animationId = requestAnimationFrame(gameLoop);
-    }
-
-    function exitGame() {
-      if (engine.animationId) cancelAnimationFrame(engine.animationId);
-      if (engine.winnerTimerId) clearTimeout(engine.winnerTimerId);
-      switchView('dashboard');
-    }
-
-    // Esc key listener
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && currentViewId === 'view-game') {
-        exitGame();
-      }
-    });
-
-    function updatePhysics() {
-      const activeFlags = engine.flags.filter(f => !f.escaped);
-      if (activeFlags.length <= 1) return;
-
-      engine.rotation += 0.006;
-
-      engine.flags.forEach(flag => {
-        if (flag.escaped) return;
-
-        flag.x += flag.vx;
-        flag.y += flag.vy;
-
-        const currentSpeed = Math.hypot(flag.vx, flag.vy);
-        if (currentSpeed > 0 && Math.abs(currentSpeed - 0.8) > 0.01) {
-          flag.vx = (flag.vx / currentSpeed) * 0.8;
-          flag.vy = (flag.vy / currentSpeed) * 0.8;
-        }
-
-        const dx = flag.x - engine.circleX;
-        const dy = flag.y - engine.circleY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance + flag.radius >= engine.circleRadius) {
-          let angle = Math.atan2(dy, dx);
-          let localAngle = (angle - engine.rotation) % (Math.PI * 2);
-          if (localAngle < 0) localAngle += Math.PI * 2;
-
-          if (localAngle > 0 && localAngle < engine.gapAngle) {
-            if (distance > engine.circleRadius + 40) {
-              flag.escaped = true;
-              addEliminatedFlag(flag);
-            }
-          } else {
-            // If the gap closed on the flag while it was already mostly OUTSIDE, instantly eliminate it!
-            if (distance > engine.circleRadius) {
-              flag.escaped = true;
-              addEliminatedFlag(flag);
-            } else {
-              // Otherwise, it's a normal bounce INSIDE the circle
-              const normalX = -dx / distance;
-              const normalY = -dy / distance;
-              const dotProduct = flag.vx * normalX + flag.vy * normalY;
-
-              if (dotProduct < 0) {
-                const bounciness = 1.0;
-                let newVx = flag.vx - (1 + bounciness) * dotProduct * normalX;
-                let newVy = flag.vy - (1 + bounciness) * dotProduct * normalY;
-                
-                const spin = (Math.random() - 0.5) * 0.3;
-                const cosSpin = Math.cos(spin);
-                const sinSpin = Math.sin(spin);
-                
-                flag.vx = newVx * cosSpin - newVy * sinSpin;
-                flag.vy = newVx * sinSpin + newVy * cosSpin;
-              }
-              
-              flag.x = engine.circleX + (engine.circleRadius - flag.radius) * (dx / distance);
-              flag.y = engine.circleY + (engine.circleRadius - flag.radius) * (dy / distance);
-            }
-          }
-        }
-      });
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.beginPath();
-      ctx.arc(
-        engine.circleX,
-        engine.circleY,
-        engine.circleRadius,
-        engine.rotation + engine.gapAngle,
-        engine.rotation + Math.PI * 2
-      );
-      ctx.lineWidth = 10;
-      ctx.strokeStyle = '#1e3a8a';
-      ctx.lineCap = 'round';
-      ctx.stroke();
-
-      engine.flags.forEach(flag => {
-        if (!flag.escaped) {
-          ctx.drawImage(flag.sprite, flag.x - 18, flag.y - 18);
-        }
-      });
-    }
-
-    function gameLoop() {
-      updatePhysics();
-      draw();
-      
-      const activeFlags = engine.flags.filter(f => !f.escaped);
-      if (activeFlags.length === 1 && !engine.hasWon) {
-        engine.hasWon = true;
-        const winner = activeFlags[0];
-        
-        winEmojiEl.innerText = winner.emoji;
-        winNameEl.innerText = winner.name;
-        winOverlay.classList.remove('hidden');
-        winOverlay.classList.add('flex');
-        
-        engine.winnerTimerId = setTimeout(() => {
-          startGame();
-        }, 10000);
-      }
-      
-      engine.animationId = requestAnimationFrame(gameLoop);
     }
   </script>
 </body>
