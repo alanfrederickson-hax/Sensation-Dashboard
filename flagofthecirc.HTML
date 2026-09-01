@@ -156,7 +156,6 @@
         };
 
         // --- Core UI Functions ---
-
         const updateRemainingText = () => {
             remainingDisplay.innerText = `Remaining: ${remainingCount}`;
         };
@@ -210,7 +209,6 @@
         };
 
         // --- Physics & Game Loop ---
-
         const initGame = () => {
             // Reset state variables
             eliminatedFlags = [];
@@ -227,9 +225,9 @@
 
             engine.rotation = 0;
             const sharedStartingAngle = Math.random() * Math.PI * 2;
+            const speed = 0.8;
 
             engine.flags = FLAGS.map(flag => {
-                const speed = 0.8;
                 return {
                     ...flag,
                     sprite: getEmojiSprite(flag.emoji),
@@ -248,6 +246,7 @@
             if (activeFlags.length <= 1) return;
 
             engine.rotation += 0.006;
+            const targetSpeed = 0.8;
 
             engine.flags.forEach(flag => {
                 if (flag.escaped) return;
@@ -257,43 +256,47 @@
 
                 // Force constant speed
                 const currentSpeed = Math.hypot(flag.vx, flag.vy);
-                if (currentSpeed > 0 && Math.abs(currentSpeed - 0.8) > 0.01) {
-                    flag.vx = (flag.vx / currentSpeed) * 0.8;
-                    flag.vy = (flag.vy / currentSpeed) * 0.8;
+                if (currentSpeed > 0 && Math.abs(currentSpeed - targetSpeed) > 0.01) {
+                    flag.vx = (flag.vx / currentSpeed) * targetSpeed;
+                    flag.vy = (flag.vy / currentSpeed) * targetSpeed;
                 }
 
-                // Collision Detection
+                // Collision Detection against the inner edge
                 const dx = flag.x - engine.circleX;
                 const dy = flag.y - engine.circleY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
+                const maxRadius = engine.circleRadius - flag.radius;
 
-                if (distance + flag.radius >= engine.circleRadius) {
+                if (distance >= maxRadius) {
                     let angle = Math.atan2(dy, dx);
                     let localAngle = (angle - engine.rotation) % (Math.PI * 2);
                     if (localAngle < 0) localAngle += Math.PI * 2;
 
                     // Escaping through the gap
                     if (localAngle > 0 && localAngle < engine.gapAngle) {
+                        // Let it completely exit the bounds before eliminating
                         if (distance > engine.circleRadius + 40) {
                             flag.escaped = true;
                             eliminateFlag(flag);
                         }
                     } else {
-                        // Bouncing / Being trapped
+                        // Hitting the solid wall bounds
                         if (distance > engine.circleRadius - flag.radius + 1) {
                             flag.escaped = true;
                             eliminateFlag(flag);
                         } else {
+                            // Normal pointing strictly INWARD from the circle wall
                             const normalX = -dx / distance;
                             const normalY = -dy / distance;
+
+                            // Dot product
                             const dotProduct = flag.vx * normalX + flag.vy * normalY;
 
                             if (dotProduct < 0) {
-                                const bounciness = 1.0;
-                                let newVx = flag.vx - (1 + bounciness) * dotProduct * normalX;
-                                let newVy = flag.vy - (1 + bounciness) * dotProduct * normalY;
+                                let newVx = flag.vx - 2 * dotProduct * normalX;
+                                let newVy = flag.vy - 2 * dotProduct * normalY;
 
-                                const spin = (Math.random() - 0.5) * 0.3;
+                                const spin = (Math.random() - 0.5) * 0.1;
                                 const cosSpin = Math.cos(spin);
                                 const sinSpin = Math.sin(spin);
 
@@ -301,8 +304,8 @@
                                 flag.vy = newVx * sinSpin + newVy * cosSpin;
                             }
 
-                            flag.x = engine.circleX + (engine.circleRadius - flag.radius) * (dx / distance);
-                            flag.y = engine.circleY + (engine.circleRadius - flag.radius) * (dy / distance);
+                            flag.x = engine.circleX + maxRadius * (dx / distance);
+                            flag.y = engine.circleY + maxRadius * (dy / distance);
                         }
                     }
                 }
