@@ -33,7 +33,15 @@
         .animate-shrink { animation: shrink 10s linear forwards; }
     </style>
 </head>
-<body class="min-h-screen w-full bg-gray-100 flex items-center justify-center p-4 font-sans selection:bg-blue-300 m-0">
+<body class="min-h-screen w-full bg-gray-100 flex items-center justify-center p-4 font-sans selection:bg-blue-300 m-0 relative">
+
+    <!-- External Back Button (Top Right Corner Outside Phone Frame) -->
+    <a href="index.html" class="fixed top-4 right-4 bg-white/90 hover:bg-white backdrop-blur-md text-blue-900 font-bold px-4 py-2 rounded-xl shadow-lg border border-gray-200/80 flex items-center gap-2 transition transform hover:scale-105 active:scale-95 z-50 text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back
+    </a>
 
     <!-- Fixed Mobile Phone Frame -->
     <div class="relative w-[390px] h-[844px] bg-blue-200 rounded-[3rem] border-[14px] border-white shadow-2xl overflow-hidden flex flex-col shrink-0 ring-4 ring-gray-200/50">
@@ -246,7 +254,7 @@
             if (activeFlags.length <= 1) return;
 
             engine.rotation += 0.006;
-            const targetSpeed = 0.8;
+            const targetSpeed = 0.5;
 
             engine.flags.forEach(flag => {
                 if (flag.escaped) return;
